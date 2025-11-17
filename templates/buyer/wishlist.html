@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Wishlist - Mode S7vn</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    body { background: #0a0a0a; color: #ffffff; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    .page-header { padding: 24px 0; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .page-header h2 { font-weight: 600; }
+    .wishlist-card { background: #121212; border-radius: 16px; border: 1px solid #262626; padding: 16px; height: 100%; box-shadow: 0 16px 40px rgba(0,0,0,0.45); }
+    .wishlist-card img { border-radius: 12px; object-fit: cover; width: 100%; height: 220px; }
+    .wishlist-card h5 { margin-top: 12px; margin-bottom: 6px; color: #ffffff; }
+    .wishlist-card p { margin-bottom: 8px; color: #d0d0d0; font-size: 0.9rem; }
+    .wishlist-card .price { color: #c24645; font-weight: 600; }
+    .wishlist-empty { padding: 80px 20px; text-align: center; }
+    .wishlist-empty i { font-size: 72px; color: #777; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  {% include 'components/buyer_nav.html' %}
+
+  <div class="container">
+    <div class="page-header">
+      <h2><i class="bi bi-heart me-2"></i>My Wishlist</h2>
+      <p class="text-muted mb-0">Items you've saved for later</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          const flashes = [
+            {% for category, message in messages %}
+            {category: "{{ category }}", message: {{ message|tojson }}}{% if not loop.last %},{% endif %}
+            {% endfor %}
+          ];
+          if (window.showToast) {
+            flashes.forEach(f => {
+              const type = f.category === 'error' ? 'error' : (f.category || 'info');
+              window.showToast(type, f.message);
+            });
+          }
+        });
+      </script>
+      {% endif %}
+    {% endwith %}
+
+    {% if wishlist_items %}
+    <div class="row g-4 mb-5">
+      {% for item in wishlist_items %}
+      <div class="col-md-6 col-lg-3">
+        <div class="wishlist-card">
+          {% if item.image %}
+          <img src="{{ url_for('static', filename='products/' + item.image) }}" alt="{{ item.name }}"
+               onerror="this.onerror=null; this.src='https://via.placeholder.com/300x300?text=No+Image';">
+          {% else %}
+          <div class="d-flex align-items-center justify-content-center" style="height:220px; background:#222; border-radius:12px;">
+            <i class="bi bi-image" style="font-size:2.5rem; color:#555;"></i>
+          </div>
+          {% endif %}
+
+          <h5>{{ item.name }}</h5>
+          <p class="mb-1"><small class="text-muted">{{ item.category or 'Menswear' }}</small></p>
+          <p class="price mb-2">₱{{ "%.2f"|format(item.price) }}</p>
+          <div class="d-grid gap-2 mt-2">
+            <a href="{{ url_for('product_detail', product_id=item.id) }}" class="btn btn-outline-light btn-sm">
+              <i class="bi bi-eye me-1"></i> View Product
+            </a>
+            <form method="POST" action="{{ url_for('remove_from_wishlist', product_id=item.id) }}">
+              <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-heartbreak me-1"></i> Remove
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="wishlist-empty">
+      <div class="card border-0" style="background:#121212; border-radius:16px; border:1px solid #262626; max-width:480px; margin:0 auto;">
+        <div class="card-body p-5 text-center">
+          <i class="bi bi-heart text-muted"></i>
+          <h4 class="mt-3">Your wishlist is empty</h4>
+          <p class="text-muted mb-4">Tap the heart icon on any product to save it here.</p>
+          <a href="{{ url_for('buyer') }}" class="btn btn-primary">
+            <i class="bi bi-grid me-2"></i>Browse Products
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

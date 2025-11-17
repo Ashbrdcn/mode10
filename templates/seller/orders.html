@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Orders</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #050509;
+            color: #f8f9ff;
+        }
+        .card {
+            background: rgba(10, 10, 15, 0.96);
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+        }
+        .text-muted {
+            color: #ffffff !important;
+        }
+        .table thead th {
+            background-color: rgba(15,23,42,0.9);
+            color: #f9fafb;
+            border-color: rgba(148,163,184,0.3);
+        }
+        .table tbody td {
+            border-color: rgba(148,163,184,0.2);
+        }
+        .order-timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-top: 4px;
+        }
+        .timeline-step {
+            flex: 1;
+            font-size: 12px;
+            text-align: center;
+            padding: 6px 4px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.6);
+        }
+        .timeline-step.active {
+            border-color: #60a5fa;
+            background: rgba(37,99,235,0.2);
+            color: #ffffff;
+        }
+        .modal-content {
+            background: rgba(10, 10, 15, 0.98);
+            color: #f8f9ff;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.18);
+        }
+        .modal-header,
+        .modal-footer {
+            border-color: rgba(148,163,184,0.25);
+        }
+        .btn-filter {
+            border-radius: 999px;
+        }
+    </style>
+</head>
+<body>
+    {% include 'components/seller_nav.html' %}
+    
+    <div class="main-content">
+        <div class="top-bar">
+            <h5>Orders Management</h5>
+            <div class="user-info">
+                <div>
+                    <div style="font-weight: 600; font-size: 14px;">{{ session.first_name }}</div>
+                    <div style="font-size: 12px; color: #f8f9ff;">Seller Account</div>
+                </div>
+                <div class="user-avatar">{{ session.first_name[0] }}</div>
+            </div>
+        </div>
+
+        <div style="padding: 24px;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const flashes = [
+                        {% for category, message in messages %}
+                        {category: '{{ category }}', message: {{ message|tojson }}},
+                        {% endfor %}
+                    ];
+                    flashes.forEach(f => {
+                        let type = 'info';
+                        if (f.category === 'success') type = 'success';
+                        else if (f.category === 'error' || f.category === 'danger' || f.category === 'warning') type = 'error';
+                        if (window.showToast) {
+                            window.showToast(type, f.message);
+                        }
+                    });
+                });
+            </script>
+            {% endif %}
+            {% endwith %}
+
+            {% if orders %}
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <h2 class="mb-0">Orders</h2>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-light btn-filter active" onclick="filterOrders('all', event)">
+                        All <span class="badge bg-secondary ms-1">{{ orders|length }}</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-warning btn-filter" onclick="filterOrders('pending', event)">
+                        Pending{% if status_counts.pending %} <span class="badge bg-warning text-dark ms-1">{{ status_counts.pending }}</span>{% endif %}
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info btn-filter" onclick="filterOrders('processing', event)">
+                        Processing{% if status_counts.processing %} <span class="badge bg-info text-dark ms-1">{{ status_counts.processing }}</span>{% endif %}
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success btn-filter" onclick="filterOrders('completed', event)">
+                        Completed{% if status_counts.completed %} <span class="badge bg-success ms-1">{{ status_counts.completed }}</span>{% endif %}
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-filter" onclick="filterOrders('cancelled', event)">
+                        Cancelled{% if status_counts.cancelled %} <span class="badge bg-danger ms-1">{{ status_counts.cancelled }}</span>{% endif %}
+                    </button>
+                </div>
+            </div>
+
+            {% if status_counts.pending or status_counts.processing %}
+            <div class="text-muted small mb-3">
+                <i class="bi bi-info-circle me-1"></i>
+                You currently have
+                {% if status_counts.pending %}
+                    <strong>{{ status_counts.pending }}</strong> pending
+                    {% if status_counts.processing %} and {% endif %}
+                {% endif %}
+                {% if status_counts.processing %}
+                    <strong>{{ status_counts.processing }}</strong> processing
+                {% endif %}
+                order{% if (status_counts.pending + status_counts.processing) > 1 %}s{% endif %} to attend to.
+            </div>
+            {% endif %}
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="sellerOrdersTable">
+                            <thead>
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Customer</th>
+                                    <th>Product</th>
+                                    <th>Qty</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                <tr data-status="{{ order.status }}">
+                                    <td><strong>{{ order.order_number }}</strong></td>
+                                    <td>
+                                        <div>{{ order.first_name }} {{ order.last_name }}</div>
+                                        <small class="text-muted">{{ order.email }}</small><br>
+                                        <small class="text-muted">{{ order.phone }}</small>
+                                    </td>
+                                    <td>{{ order.product_name }}</td>
+                                    <td>{{ order.quantity }}</td>
+                                    <td><strong>₱{{ "%.2f"|format(order.total_price) }}</strong></td>
+                                    <td>
+                                        {% if order.status == 'pending' %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif order.status == 'processing' %}
+                                        <span class="badge bg-primary">Processing</span>
+                                        {% elif order.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Cancelled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="viewOrder({{ order.id }}, '{{ order.order_number }}', '{{ order.first_name }} {{ order.last_name }}', '{{ order.product_name }}', {{ order.quantity }}, {{ order.total_price }}, '{{ order.delivery_address or 'N/A' }}', '{{ order.status }}', '{{ order.email }}', '{{ order.phone }}')">
+                                                <i class="bi bi-eye"></i> View
+                                            </button>
+                                            <form method="POST" action="{{ url_for('update_order_status', order_id=order.id) }}" class="d-inline">
+                                                <input type="hidden" name="status" value="processing">
+                                                <button type="submit" class="btn btn-sm btn-outline-info" {% if order.status != 'pending' %}disabled{% endif %}>
+                                                    <i class="bi bi-arrow-repeat"></i> Mark Processing
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="{{ url_for('update_order_status', order_id=order.id) }}" class="d-inline" onsubmit="return confirm('Mark this order as completed?');">
+                                                <input type="hidden" name="status" value="completed">
+                                                <button type="submit" class="btn btn-sm btn-outline-success" {% if order.status not in ['processing','pending'] %}disabled{% endif %}>
+                                                    <i class="bi bi-check-circle"></i> Mark Completed
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>No orders yet. Orders will appear here when customers purchase your products.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div class="modal fade" id="orderDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Order Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Order Information</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Order Number:</strong></td>
+                                    <td id="detail_order_number"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Product:</strong></td>
+                                    <td id="detail_product"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Quantity:</strong></td>
+                                    <td id="detail_quantity"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Total Price:</strong></td>
+                                    <td id="detail_price"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td id="detail_status"></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Customer Information</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Name:</strong></td>
+                                    <td id="detail_customer"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Email:</strong></td>
+                                    <td id="detail_email"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Phone:</strong></td>
+                                    <td id="detail_phone"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Delivery Address:</strong></td>
+                                    <td id="detail_address"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6>Update Order Status</h6>
+                    <div class="order-timeline mb-2">
+                        <div class="timeline-step" id="tl_pending_seller">Pending</div>
+                        <div class="timeline-step" id="tl_processing_seller">Processing</div>
+                        <div class="timeline-step" id="tl_completed_seller">Completed</div>
+                    </div>
+                    <small class="text-muted" id="statusHint"></small>
+                    <form method="POST" id="updateStatusForm">
+                        <div class="row mt-3">
+                            <div class="col-md-8">
+                                <select class="form-select" name="status" id="update_status">
+                                    <option value="pending">Pending</option>
+                                    <option value="processing">Processing</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mt-2 mt-md-0">
+                                <button type="submit" class="btn btn-primary w-100">Update Status</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function filterOrders(status, evt) {
+            const rows = document.querySelectorAll('#sellerOrdersTable tbody tr');
+            const buttons = document.querySelectorAll('.btn-filter');
+
+            buttons.forEach(btn => btn.classList.remove('active'));
+            if (evt && evt.target) evt.target.classList.add('active');
+
+            rows.forEach(row => {
+                const rowStatus = (row.dataset.status || '').toLowerCase();
+                if (status === 'all' || rowStatus === status) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function viewOrder(id, orderNumber, customer, product, quantity, price, address, status, email, phone) {
+            document.getElementById('detail_order_number').textContent = orderNumber;
+            document.getElementById('detail_customer').textContent = customer;
+            document.getElementById('detail_product').textContent = product;
+            document.getElementById('detail_quantity').textContent = quantity;
+            document.getElementById('detail_price').textContent = '₱' + parseFloat(price).toFixed(2);
+            document.getElementById('detail_address').textContent = address;
+            document.getElementById('detail_email').textContent = email;
+            document.getElementById('detail_phone').textContent = phone;
+            
+            // Reset and set timeline steps + hint text
+            ['tl_pending_seller','tl_processing_seller','tl_completed_seller'].forEach(idEl => {
+                const el = document.getElementById(idEl);
+                if (el) el.classList.remove('active');
+            });
+            const hint = document.getElementById('statusHint');
+            if (status === 'pending') {
+                const el = document.getElementById('tl_pending_seller');
+                if (el) el.classList.add('active');
+                if (hint) hint.textContent = 'Waiting for your confirmation or packing.';
+            } else if (status === 'processing') {
+                const el = document.getElementById('tl_processing_seller');
+                if (el) el.classList.add('active');
+                if (hint) hint.textContent = 'You are preparing the order or it is with the courier.';
+            } else if (status === 'completed') {
+                const el = document.getElementById('tl_completed_seller');
+                if (el) el.classList.add('active');
+                if (hint) hint.textContent = 'Delivered to the customer.';
+            } else if (hint) {
+                hint.textContent = 'This order was cancelled.';
+            }
+            
+            let statusBadge = '';
+            if (status === 'pending') statusBadge = '<span class="badge bg-warning text-dark">Pending</span>';
+            else if (status === 'processing') statusBadge = '<span class="badge bg-primary">Processing</span>';
+            else if (status === 'completed') statusBadge = '<span class="badge bg-success">Completed</span>';
+            else statusBadge = '<span class="badge bg-danger">Cancelled</span>';
+            
+            document.getElementById('detail_status').innerHTML = statusBadge;
+            const statusSelect = document.getElementById('update_status');
+            statusSelect.value = status;
+
+            // Disable cancel when order is already completed (delivered)
+            const cancelledOpt = statusSelect.querySelector('option[value="cancelled"]');
+            if (cancelledOpt) {
+                cancelledOpt.disabled = (status === 'completed');
+            }
+
+            document.getElementById('updateStatusForm').action = `/seller/orders/update/${id}`;
+            
+            new bootstrap.Modal(document.getElementById('orderDetailModal')).show();
+        }
+    </script>
+</body>
+</html>

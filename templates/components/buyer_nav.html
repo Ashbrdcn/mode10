@@ -1,0 +1,317 @@
+<!-- Buyer Navigation Component -->
+<style>
+    :root {
+        --surface: #ffffff;
+        --text-main: #111111;
+        --text-muted: #555555;
+        --border: #e1e1e1;
+        --accent: #000000;
+    }
+
+.buyer-navbar {
+        background-color: rgba(10, 10, 10, 0.95);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 0;
+        position: sticky;
+        top: 0;
+        z-index: 1050;
+    }
+    
+    .buyer-navbar .navbar-brand {
+        color: #ffffff !important;
+        font-weight: 700;
+        font-size: 24px;
+        padding: 15px 0;
+    }
+    
+.buyer-navbar .nav-link {
+        color: rgba(255,255,255,0.7) !important;
+        font-weight: 500;
+        padding: 15px 20px !important;
+        transition: color 0.2s ease;
+        position: relative;
+    }
+    
+    .buyer-navbar .nav-link::after {
+        content: "";
+        position: absolute;
+        left: 20%;
+        right: 20%;
+        bottom: 0;
+        height: 2px;
+        background-color: #c24645;
+        transform: scaleX(0);
+        transform-origin: center;
+        transition: transform 0.2s ease;
+    }
+    
+    .buyer-navbar .nav-link:hover {
+        color: #ffffff !important;
+    }
+    
+    .buyer-navbar .nav-link:hover::after,
+    .buyer-navbar .nav-link.active::after {
+        transform: scaleX(1);
+    }
+    
+    .buyer-navbar .nav-link.active {
+        color: #ffffff !important;
+        background: transparent;
+    }
+    
+    .buyer-navbar .nav-link i {
+        margin-right: 8px;
+        font-size: 18px;
+    }
+    
+    .cart-badge {
+        position: absolute;
+        top: 8px;
+        right: 10px;
+        background: #ff4757;
+        color: white;
+        border-radius: 50%;
+        padding: 2px 6px;
+        font-size: 11px;
+        font-weight: bold;
+        min-width: 18px;
+        text-align: center;
+    }
+    
+.user-dropdown .dropdown-toggle {
+        color: #ffffff !important;
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 50px;
+        padding: 8px 20px;
+        font-weight: 500;
+    }
+    
+    .user-dropdown .dropdown-toggle:hover {
+        background: rgba(255,255,255,0.25);
+        border-color: rgba(255,255,255,0.5);
+    }
+    
+    .user-dropdown .dropdown-menu {
+        border: none;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        border-radius: 10px;
+        margin-top: 10px;
+    }
+    
+    .user-dropdown .dropdown-item {
+        padding: 12px 20px;
+        transition: all 0.3s;
+    }
+    
+.user-dropdown .dropdown-item:hover {
+        background: rgba(0,0,0,0.04);
+        color: var(--text-main);
+    }
+    
+    .user-dropdown .dropdown-item i {
+        margin-right: 10px;
+        width: 20px;
+        text-align: center;
+    }
+
+    /* Toast notifications */
+    #globalToastContainer {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 2000;
+    }
+
+    .flash-toast {
+        min-width: 260px;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        background: #111111;
+        color: #ffffff;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        opacity: 0;
+        transform: translateX(20px);
+        transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .flash-toast.show {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    .flash-toast.success {
+        border-left: 4px solid #28a745;
+    }
+
+    .flash-toast.error {
+        border-left: 4px solid #dc3545;
+    }
+
+    .flash-toast.info {
+        border-left: 4px solid #0d6efd;
+    }
+    
+    @media (max-width: 991px) {
+        .buyer-navbar .nav-link {
+            padding: 10px 15px !important;
+        }
+        
+        .cart-badge {
+            position: static;
+            display: inline-block;
+            margin-left: 5px;
+        }
+    }
+</style>
+
+<nav class="navbar navbar-expand-lg navbar-dark buyer-navbar">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand" href="{{ url_for('buyer') }}">
+            <i class="bi bi-shop-window me-2"></i>Mode S7vn
+            <span class="badge bg-light text-dark ms-2" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">Buyer</span>
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#buyerNav" 
+                style="background: white;">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="buyerNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'buyer' }}" 
+                       href="{{ url_for('buyer') }}">
+                        <i class="bi bi-grid"></i>Browse Products
+                    </a>
+                </li>
+                
+                <li class="nav-item position-relative">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'view_cart' }}" 
+                       href="{{ url_for('view_cart') }}">
+                        <i class="bi bi-cart3"></i>Cart
+                        <span class="cart-badge" id="cartBadge">0</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'buyer_orders' }}" 
+                       href="{{ url_for('buyer_orders') }}">
+                        <i class="bi bi-bag-check"></i>My Orders
+                    </a>
+                </li>
+            </ul>
+            
+            <!-- Search Bar -->
+            <form class="d-flex me-3" role="search" action="{{ url_for('buyer') }}" method="GET">
+                <div class="input-group">
+                    <input class="form-control" type="search" placeholder="Search products..." 
+                           name="q" aria-label="Search" style="border-radius: 50px 0 0 50px;">
+                    <button class="btn btn-light" type="submit" style="border-radius: 0 50px 50px 0;">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </form>
+            
+            <!-- User Dropdown -->
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown user-dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" 
+                       data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-person-circle me-2"></i>{{ session.get('first_name', 'User') }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item {{ 'active' if request.endpoint == 'buyer_profile' }}" href="{{ url_for('buyer_profile') }}">
+                                <i class="bi bi-person"></i>My Profile
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('buyer_orders') }}">
+                                <i class="bi bi-bag-check"></i>My Orders
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {{ 'active' if request.endpoint == 'buyer_wishlist' }}" href="{{ url_for('buyer_wishlist') }}">
+                                <i class="bi bi-heart"></i>Wishlist
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                                <i class="bi bi-box-arrow-right"></i>Logout
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<script>
+// Update cart badge on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateCartBadge();
+});
+
+function updateCartBadge() {
+    // Get cart count from server (optional)
+    fetch('/cart/count')
+        .then(response => response.json())
+        .then(data => {
+            if (data.count > 0) {
+                document.getElementById('cartBadge').textContent = data.count;
+                document.getElementById('cartBadge').style.display = 'inline-block';
+            } else {
+                document.getElementById('cartBadge').style.display = 'none';
+            }
+        })
+        .catch(() => {
+            // If endpoint doesn't exist yet, hide badge
+            document.getElementById('cartBadge').style.display = 'none';
+        });
+}
+
+function showToast(type, message) {
+    let container = document.getElementById('globalToastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'globalToastContainer';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'flash-toast ' + (type || 'info');
+
+    const icon = document.createElement('i');
+    if (type === 'success') icon.className = 'bi bi-check-circle-fill text-success';
+    else if (type === 'error') icon.className = 'bi bi-x-circle-fill text-danger';
+    else icon.className = 'bi bi-info-circle-fill text-info';
+
+    const text = document.createElement('div');
+    text.textContent = message;
+
+    toast.appendChild(icon);
+    toast.appendChild(text);
+    container.appendChild(toast);
+
+    // Trigger animation
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 250);
+    }, 4000);
+}
+
+// Export function for use in other pages
+window.updateCartBadge = updateCartBadge;
+window.showToast = showToast;
+</script>

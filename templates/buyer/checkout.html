@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - Mode7 Shop</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <style>
+        /* Background */
+        body {
+            background: #050509;
+            color: #f8f9ff;
+        }
+        /* Header bar */
+        .page-header {
+            background: rgba(10, 10, 15, 0.96);
+            color: #fff;
+            padding: 24px 0;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .page-header h2 { font-weight: 800; }
+        .page-header p { opacity: .9; color: rgba(255,255,255,0.75) !important; }
+        /* Cards */
+        .checkout-card {
+            background: rgba(10, 10, 15, 0.96);
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            color: #ffffff;
+        }
+        .section-title {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 17px; font-weight: 800; color: #ffffff;
+            margin-bottom: 14px; padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .order-item { padding: 10px 0; border-bottom: 1px dashed rgba(255,255,255,0.12); }
+        .order-item:last-child { border-bottom: none; }
+        .summary-card { position: sticky; top: 20px; }
+        /* Payment */
+        .payment-option { padding: 12px; border: 2px solid rgba(255,255,255,0.12); border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: all .25s; }
+        .payment-option:hover { border-color: #667eea; background: rgba(102,126,234,0.12); }
+        .payment-option input:checked + label { border-color: #667eea; background: rgba(102,126,234,0.12); }
+        /* Map */
+        #map { min-height: 240px; }
+        .text-muted {
+            color: rgba(255,255,255,0.7) !important;
+        }
+        .bg-light {
+            background-color: rgba(255,255,255,0.08) !important;
+        }
+    </style>
+</head>
+<body>
+    {% include 'components/buyer_nav.html' %}
+    
+    <div class="page-header">
+        <div class="container">
+            <h2><i class="bi bi-credit-card me-2"></i>Checkout</h2>
+            <p class="text-muted mb-0">Complete your purchase</p>
+        </div>
+    </div>
+    
+    <div class="container mb-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const flashes = [
+                    {% for category, message in messages %}
+                    {category: '{{ category }}', message: {{ message|tojson }}},
+                    {% endfor %}
+                ];
+                flashes.forEach(f => {
+                    let type = 'info';
+                    if (f.category === 'success') type = 'success';
+                    else if (f.category === 'error' || f.category === 'danger' || f.category === 'warning') type = 'error';
+                    if (window.showToast) {
+                        window.showToast(type, f.message);
+                    }
+                });
+            });
+        </script>
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('place_order') }}" id="checkoutForm">
+            {% if selected_ids %}
+                {% for sid in selected_ids %}
+                    <input type="hidden" name="selected_ids[]" value="{{ sid }}" />
+                {% endfor %}
+            {% else %}
+                {% for item in cart_items %}
+                    <input type="hidden" name="selected_ids[]" value="{{ item.id }}" />
+                {% endfor %}
+            {% endif %}
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Delivery Address -->
+                    <div class="checkout-card">
+                        <h5 class="section-title">
+                            <i class="bi bi-geo-alt me-2"></i>Delivery Address
+                        </h5>
+                        <div class="mb-3">
+                            <label class="form-label">Full Delivery Address *</label>
+                            <textarea class="form-control" name="delivery_address" id="deliveryAddress" rows="3" required 
+                                      placeholder="Enter complete delivery address"
+                                      data-profile-address="{% if buyer_info.street %}{{ buyer_info.street }}, {% endif %}{{ buyer_info.barangay_name }}, {{ buyer_info.municipality_name }}, {{ buyer_info.province_name }}, {{ buyer_info.region_name }}{% if buyer_info.zip_code %}, {{ buyer_info.zip_code }}{% endif %}">{% if buyer_info.street %}{{ buyer_info.street }}, {% endif %}{{ buyer_info.barangay_name }}, {{ buyer_info.municipality_name }}, {{ buyer_info.province_name }}, {{ buyer_info.region_name }}{% if buyer_info.zip_code %}, {{ buyer_info.zip_code }}{% endif %}</textarea>
+                            <small class="text-muted d-block">Include house number, street, barangay, city/municipality, province, and ZIP code.</small>
+                            <small class="text-muted d-block">
+                                This address is prefilled from your profile.
+                                <a href="{{ url_for('buyer_profile') }}" class="link-primary">Edit profile address</a>
+                                if needed.
+                            </small>
+                            <button type="button" class="btn btn-link btn-sm px-0 mt-1" id="useProfileAddress">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Use profile address
+                            </button>
+                            <div class="mt-2">
+                                <input type="hidden" name="delivery_lat" id="delivery_lat">
+                                <input type="hidden" name="delivery_lng" id="delivery_lng">
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="locateBtn">
+                                    <i class="bi bi-geo-alt"></i> Use my current location
+                                </button>
+                                <div class="small mt-2" id="locationStatus"></div>
+                            </div>
+
+                            <div class="mt-3">
+                                <div class="input-group input-group-sm mb-2" style="max-width: 520px;">
+                                    <input type="text" id="addressSearch" class="form-control" placeholder="Search address or place">
+                                    <button class="btn btn-outline-secondary" type="button" id="searchBtn"><i class="bi bi-search"></i></button>
+                                </div>
+                                <div id="map" style="height: 260px; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.12);"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Contact Number</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                    <input type="text" class="form-control" value="{{ buyer_info.phone }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Items -->
+                    <div class="checkout-card">
+                        <h5 class="section-title">
+                            <i class="bi bi-box-seam me-2"></i>Order Items ({{ cart_items|length }})
+                        </h5>
+                        
+                        {% for item in cart_items %}
+                        <div class="order-item">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    {% if item.image %}
+                                    <img src="{{ url_for('static', filename='products/' + item.image) }}" 
+                                         class="img-fluid rounded" alt="{{ item.name }}"
+                                         onerror="this.src='https://via.placeholder.com/100?text=No+Image'">
+                                    {% else %}
+                                    <div class="bg-light d-flex align-items-center justify-content-center rounded" style="height: 80px;">
+                                        <i class="bi bi-image text-muted"></i>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="mb-1">{{ item.name }}</h6>
+                                    <p class="text-muted small mb-0">
+                                        <i class="bi bi-shop me-1"></i>Sold by: {{ item.seller_name }}
+                                    </p>
+                                    <p class="text-muted small mb-0">Qty: {{ item.quantity }}</p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <h6 class="mb-0 text-primary">₱{{ "%.2f"|format(item.price * item.quantity) }}</h6>
+                                    <small class="text-muted">₱{{ "%.2f"|format(item.price) }} each</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div class="checkout-card">
+                        <h5 class="section-title">
+                            <i class="bi bi-wallet2 me-2"></i>Payment Method
+                        </h5>
+                        
+                        <div class="payment-option">
+                            <input class="form-check-input" type="radio" name="payment_method" 
+                                   id="cod" value="COD" checked>
+                            <label class="form-check-label w-100" for="cod" style="cursor: pointer; padding-left: 10px;">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-cash-coin fs-3 me-3 text-success"></i>
+                                    <div>
+                                        <strong>Cash on Delivery (COD)</strong><br>
+                                        <small class="text-muted">Pay when you receive your order</small>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="payment-option">
+                            <input class="form-check-input" type="radio" name="payment_method" 
+                                   id="paymongo" value="PAYMONGO">
+                            <label class="form-check-label w-100" for="paymongo" style="cursor: pointer; padding-left: 10px;">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-credit-card-2-front fs-3 me-3 text-info"></i>
+                                    <div>
+                                        <strong>Online Payment (PayMongo)</strong><br>
+                                        <small class="text-muted">Pay securely via card, GCash, and more</small>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="bi bi-shield-lock me-1"></i>
+                                Cash on Delivery is always available. Online payments are processed via PayMongo.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <!-- Order Summary -->
+                    <div class="checkout-card summary-card">
+                        <h5 class="section-title">Order Summary</h5>
+                        
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Subtotal ({{ cart_items|length }} items)</span>
+                            <span>₱{{ "%.2f"|format(subtotal) }}</span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">
+                                <i class="bi bi-truck me-1"></i>Shipping Fee
+                            </span>
+                            <span>₱{{ "%.2f"|format(shipping_fee) }}</span>
+                        </div>
+                        
+                        {% if seller_breakdown and seller_breakdown|length > 1 %}
+                        <hr class="my-3">
+                        <div class="mb-2">
+                            <span class="text-muted small d-block mb-1">
+                                <i class="bi bi-shop me-1"></i>Per-seller breakdown
+                            </span>
+                            {% for s in seller_breakdown %}
+                            <div class="d-flex justify-content-between small">
+                                <span>{{ s.seller_name }}</span>
+                                <span>₱{{ "%.2f"|format(s.total) }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <hr class="my-3">
+                        
+                        <div class="d-flex justify-content-between mb-4">
+                            <strong class="fs-5">Total</strong>
+                            <h4 class="mb-0 text-primary">₱{{ "%.2f"|format(total) }}</h4>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="placeOrderBtn">
+                                <i class="bi bi-check-circle me-2"></i>Place Order
+                            </button>
+                            
+                            <a href="{{ url_for('view_cart') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Back to Cart
+                            </a>
+                        </div>
+                        
+                        <div class="alert alert-success mt-3 mb-0 small">
+                            <i class="bi bi-shield-check me-1"></i>
+                            Your order is secure and protected
+                        </div>
+                        
+                        <div class="mt-2 p-3 bg-light rounded">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                By placing this order, you agree to our Terms & Conditions
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+            const btn = document.getElementById('placeOrderBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing Order...';
+        });
+
+        // Leaflet map + Nominatim reverse/forward geocoding
+        let map, marker;
+        function setLatLng(lat, lng, fly=true) {
+            if (!map) return;
+            const ll = [parseFloat(lat), parseFloat(lng)];
+            if (fly) map.setView(ll, 16);
+            if (!marker) {
+                marker = L.marker(ll, { draggable: true }).addTo(map);
+                marker.on('moveend', (e) => {
+                    const { lat, lng } = e.target.getLatLng();
+                    updateCoords(lat, lng);
+                    reverseGeocode(lat, lng);
+                });
+            } else {
+                marker.setLatLng(ll);
+            }
+            updateCoords(lat, lng);
+        }
+        function updateCoords(lat, lng) {
+            document.getElementById('delivery_lat').value = lat.toFixed(6);
+            document.getElementById('delivery_lng').value = lng.toFixed(6);
+        }
+        function reverseGeocode(lat, lng) {
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+                .then(r => r.json())
+                .then(d => {
+                    if (d && d.display_name) {
+                        const ta = document.querySelector('textarea[name="delivery_address"]');
+                        if (ta && (!ta.value || ta.value.trim().length < 15)) {
+                            ta.value = d.display_name;
+                        }
+                        locStatus.innerHTML = `<span class="text-success"><i class=\"bi bi-check-circle\"></i> Pinned: ${d.display_name}</span>`;
+                    }
+                })
+                .catch(() => {});
+        }
+        function forwardSearch(q) {
+            return fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(q)}`)
+                .then(r => r.json());
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            // Init map
+            map = L.map('map');
+
+            // Address preset helper
+            const addrTextarea = document.getElementById('deliveryAddress');
+            const useProfileBtn = document.getElementById('useProfileAddress');
+            if (addrTextarea && useProfileBtn) {
+                const profileAddress = addrTextarea.dataset.profileAddress || '';
+                useProfileBtn.addEventListener('click', () => {
+                    if (profileAddress) {
+                        addrTextarea.value = profileAddress;
+                        addrTextarea.focus();
+                    }
+                });
+            }
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            const latInput = document.getElementById('delivery_lat');
+            const lngInput = document.getElementById('delivery_lng');
+            if (latInput.value && lngInput.value) {
+                setLatLng(parseFloat(latInput.value), parseFloat(lngInput.value));
+            } else if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    setLatLng(pos.coords.latitude, pos.coords.longitude);
+                    reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+                }, () => {
+                    map.setView([14.5995, 120.9842], 12); // Default Manila
+                });
+            } else {
+                map.setView([14.5995, 120.9842], 12);
+            }
+
+            // Search
+            const searchBtn = document.getElementById('searchBtn');
+            const addrInput = document.getElementById('addressSearch');
+            if (searchBtn && addrInput) {
+                searchBtn.addEventListener('click', () => {
+                    const q = addrInput.value.trim();
+                    if (!q) return;
+                    forwardSearch(q).then(res => {
+                        if (res && res.length) {
+                            const lat = parseFloat(res[0].lat), lng = parseFloat(res[0].lon);
+                            setLatLng(lat, lng);
+                            reverseGeocode(lat, lng);
+                        } else {
+                            locStatus.innerHTML = '<span class="text-danger">No results found.</span>';
+                        }
+                    }).catch(() => {
+                        locStatus.innerHTML = '<span class="text-danger">Search failed. Try again.</span>';
+                    });
+                });
+            }
+        });
+
+        // Geolocation quick button
+        const locateBtn = document.getElementById('locateBtn');
+        const locStatus = document.getElementById('locationStatus');
+        if (locateBtn) {
+            locateBtn.addEventListener('click', () => {
+                if (!navigator.geolocation) {
+                    locStatus.innerHTML = '<span class="text-danger">Geolocation is not supported by your browser.</span>';
+                    return;
+                }
+                locStatus.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Detecting location...</span>';
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    setLatLng(lat, lng);
+                    reverseGeocode(lat, lng);
+                    const mapsUrl = `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}`;
+                    locStatus.innerHTML += ` <a href="${mapsUrl}" target="_blank">Open in Maps</a>`;
+                }, (err) => {
+                    locStatus.innerHTML = `<span class="text-danger">Failed to get location: ${err.message}</span>`;
+                }, { enableHighAccuracy: true, timeout: 10000 });
+            });
+        }
+    </script>
+</body>
+</html>

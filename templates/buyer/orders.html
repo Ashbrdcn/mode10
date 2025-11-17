@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders - Mode7 Shop</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: #050509;
+            color: #f8f9ff;
+        }
+        .page-header {
+            background: rgba(10, 10, 15, 0.96);
+            padding: 24px 0;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .page-header h2,
+        .page-header p {
+            color: #ffffff;
+        }
+        .order-card {
+            background: rgba(10, 10, 15, 0.96);
+            border-radius: 15px;
+            padding: 18px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.7);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: transform 0.3s;
+        }
+        .order-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 22px rgba(0,0,0,0.8);
+        }
+        .text-muted {
+            color: rgba(255,255,255,0.75) !important;
+        }
+        .card,
+        .card-body {
+            background-color: rgba(10, 10, 15, 0.96);
+            color: #ffffff;
+            border-radius: 14px;
+        }
+        .modal-content {
+            background-color: rgba(10, 10, 15, 0.98);
+            color: #ffffff;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+        .modal-header,
+        .modal-footer {
+            border-color: rgba(255,255,255,0.12);
+        }
+        .btn-close {
+            filter: invert(1) grayscale(100%);
+        }
+        .order-status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .status-pending {
+            background: rgba(255,243,205,0.1);
+            color: #ffdd57;
+        }
+        .status-processing {
+            background: rgba(207,226,255,0.12);
+            color: #4dabf7;
+        }
+        .status-completed {
+            background: rgba(209,231,221,0.12);
+            color: #51cf66;
+        }
+        .status-cancelled {
+            background: rgba(248,215,218,0.12);
+            color: #ff6b6b;
+        }
+        .empty-state {
+            padding: 80px 20px;
+            text-align: center;
+        }
+        .order-timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-top: 4px;
+        }
+        .timeline-step {
+            flex: 1;
+            font-size: 12px;
+            text-align: center;
+            padding: 6px 4px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.6);
+        }
+        .timeline-step.active {
+            border-color: #51cf66;
+            background: rgba(81,207,102,0.2);
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    {% include 'components/buyer_nav.html' %}
+    
+    <div class="page-header">
+        <div class="container">
+            <h2><i class="bi bi-bag-check me-2"></i>My Orders</h2>
+            <p class="text-muted mb-0">Track and manage your orders</p>
+        </div>
+    </div>
+    
+    <div class="container mb-5">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const flashes = [
+                    {% for category, message in messages %}
+                    {category: '{{ category }}', message: {{ message|tojson }}},
+                    {% endfor %}
+                ];
+                flashes.forEach(f => {
+                    let type = 'info';
+                    if (f.category === 'success') type = 'success';
+                    else if (f.category === 'error' || f.category === 'danger' || f.category === 'warning') type = 'error';
+                    if (window.showToast) {
+                        window.showToast(type, f.message);
+                    }
+                });
+            });
+        </script>
+        {% endif %}
+        {% endwith %}
+
+        {% if orders %}
+        <!-- Order Filters -->
+        <div class="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-primary active" onclick="filterOrders('all', event)">
+                    All Orders
+                </button>
+                <button type="button" class="btn btn-outline-warning" onclick="filterOrders('pending', event)">
+                    Pending{% if status_counts.pending %} <span class="badge bg-warning text-dark ms-1">{{ status_counts.pending }}</span>{% endif %}
+                </button>
+                <button type="button" class="btn btn-outline-info" onclick="filterOrders('processing', event)">
+                    Processing{% if status_counts.processing %} <span class="badge bg-info text-dark ms-1">{{ status_counts.processing }}</span>{% endif %}
+                </button>
+                <button type="button" class="btn btn-outline-success" onclick="filterOrders('completed', event)">
+                    Completed{% if status_counts.completed %} <span class="badge bg-success ms-1">{{ status_counts.completed }}</span>{% endif %}
+                </button>
+                <button type="button" class="btn btn-outline-danger" onclick="filterOrders('cancelled', event)">
+                    Cancelled{% if status_counts.cancelled %} <span class="badge bg-danger ms-1">{{ status_counts.cancelled }}</span>{% endif %}
+                </button>
+            </div>
+            {% if status_counts.pending or status_counts.processing %}
+            <div class="text-muted small">
+                <i class="bi bi-info-circle me-1"></i>
+                You have 
+                {% if status_counts.pending %}
+                    <strong>{{ status_counts.pending }}</strong> pending
+                    {% if status_counts.processing %} and {% endif %}
+                {% endif %}
+                {% if status_counts.processing %}
+                    <strong>{{ status_counts.processing }}</strong> processing
+                {% endif %}
+                order{% if (status_counts.pending + status_counts.processing) > 1 %}s{% endif %}.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Orders List -->
+        {% for order in orders %}
+        <div class="order-card order-item" data-status="{{ order.status }}">
+            <div class="row align-items-center">
+                <div class="col-md-2 mb-3 mb-md-0">
+                    {% if order.image %}
+                    <img src="{{ url_for('static', filename='products/' + order.image) }}" 
+                         class="img-fluid rounded" alt="{{ order.product_name }}"
+                         onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+                    {% else %}
+                    <div class="bg-light d-flex align-items-center justify-content-center rounded" style="height: 120px;">
+                        <i class="bi bi-image text-muted fs-3"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-5 mb-3 mb-md-0">
+                    <h5 class="mb-2">{{ order.product_name }}</h5>
+                    <p class="text-muted small mb-1">
+                        <i class="bi bi-receipt me-1"></i>
+                        Order #: <strong>{{ order.order_number }}</strong>
+                    </p>
+                    <p class="text-muted small mb-1">
+                        <i class="bi bi-shop me-1"></i>
+                        Seller: {{ order.seller_name }}
+                    </p>
+                    <p class="text-muted small mb-1">
+                        <i class="bi bi-box-seam me-1"></i>
+                        Quantity: {{ order.quantity }}
+                    </p>
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-calendar me-1"></i>
+                        {{ order.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                    </p>
+                </div>
+                
+                <div class="col-md-2 text-center mb-3 mb-md-0">
+                    <p class="text-muted small mb-1">Total Amount</p>
+                    <h4 class="text-primary mb-0">₱{{ "%.2f"|format(order.total_price) }}</h4>
+                </div>
+                
+                <div class="col-md-3 text-end">
+                    {% if order.status == 'pending' %}
+                    <span class="order-status status-pending">
+                        <i class="bi bi-clock-history me-1"></i>Pending
+                    </span>
+                    <p class="text-muted small mt-1 mb-0">We received your order and are waiting for seller confirmation.</p>
+                    {% elif order.status == 'processing' %}
+                    <span class="order-status status-processing">
+                        <i class="bi bi-arrow-repeat me-1"></i>Processing
+                    </span>
+                    <p class="text-muted small mt-1 mb-0">Your order is being prepared for delivery.</p>
+                    {% elif order.status == 'completed' %}
+                    <span class="order-status status-completed">
+                        <i class="bi bi-check-circle me-1"></i>Completed
+                    </span>
+                    <p class="text-muted small mt-1 mb-0">Order delivered. Thank you for shopping with us!</p>
+                    {% else %}
+                    <span class="order-status status-cancelled">
+                        <i class="bi bi-x-circle me-1"></i>Cancelled
+                    </span>
+                    <p class="text-muted small mt-1 mb-0">This order was cancelled. You can place a new order anytime.</p>
+                    {% endif %}
+                    
+                    <div class="mt-3 d-flex flex-wrap gap-2 justify-content-end">
+                        <button class="btn btn-sm btn-outline-primary" 
+                                onclick="viewOrderDetails({{ order.id }}, '{{ order.order_number }}', '{{ order.product_name }}', {{ order.quantity }}, {{ order.total_price }}, '{{ order.delivery_address or 'N/A' }}', '{{ order.status }}', '{{ order.seller_name }}', '{{ order.created_at.strftime('%B %d, %Y %I:%M %p') }}')">
+                            <i class="bi bi-eye me-1"></i>View Details
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="reorderItem({{ order.product_id }})">
+                            <i class="bi bi-arrow-repeat me-1"></i>Reorder
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <div class="card border-0 shadow-sm mx-auto" style="max-width: 500px;">
+                <div class="card-body p-5">
+                    <i class="bi bi-inbox text-muted" style="font-size: 80px;"></i>
+                    <h4 class="mt-4">No orders yet</h4>
+                    <p class="text-muted">Your order history will appear here once you make a purchase.</p>
+                    <a href="{{ url_for('buyer') }}" class="btn btn-primary mt-3">
+                        <i class="bi bi-shop me-2"></i>Start Shopping
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-receipt me-2"></i>Order Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="mb-3"><i class="bi bi-info-circle me-2"></i>Order Information</h6>
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="text-muted" style="width: 40%;">Order Number:</td>
+                                    <td><strong id="modal_order_number"></strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Product:</td>
+                                    <td id="modal_product"></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Quantity:</td>
+                                    <td id="modal_quantity"></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Total Amount:</td>
+                                    <td><strong class="text-primary fs-5" id="modal_total"></strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Status:</td>
+                                    <td id="modal_status"></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Order Date:</td>
+                                    <td id="modal_date"></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mb-3"><i class="bi bi-truck me-2"></i>Delivery Information</h6>
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="text-muted" style="width: 40%;">Seller:</td>
+                                    <td id="modal_seller"></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted" style="vertical-align: top;">Delivery Address:</td>
+                                    <td id="modal_address"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <h6 class="mb-2"><i class="bi bi-graph-up-arrow me-2"></i>Delivery progress</h6>
+                        <div class="order-timeline">
+                            <div class="timeline-step" id="tl_pending">Pending</div>
+                            <div class="timeline-step" id="tl_processing">Processing</div>
+                            <div class="timeline-step" id="tl_completed">Completed</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer d-flex flex-wrap justify-content-between gap-2">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="reorderFromModal()">
+                            <i class="bi bi-arrow-repeat me-1"></i>Reorder
+                        </button>
+                        <button type="button" class="btn btn-outline-light btn-sm" onclick="contactSupport()">
+                            <i class="bi bi-headset me-1"></i>Contact support
+                        </button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="rateItem()">
+                            <i class="bi bi-star me-1"></i>Rate this item
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-2"></i>Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function filterOrders(status, evt) {
+            const orders = document.querySelectorAll('.order-item');
+            const buttons = document.querySelectorAll('.btn-group .btn');
+            
+            // Update active button
+            buttons.forEach(btn => btn.classList.remove('active'));
+            if (evt && evt.target) {
+                evt.target.classList.add('active');
+            }
+            
+            // Filter orders
+            orders.forEach(order => {
+                if (status === 'all' || order.dataset.status === status) {
+                    order.style.display = 'block';
+                } else {
+                    order.style.display = 'none';
+                }
+            });
+        }
+
+        let modalProductId = null;
+
+        function viewOrderDetails(id, orderNumber, product, quantity, total, address, status, seller, date) {
+            document.getElementById('modal_order_number').textContent = orderNumber;
+            document.getElementById('modal_product').textContent = product;
+            document.getElementById('modal_quantity').textContent = quantity;
+            document.getElementById('modal_total').textContent = '₱' + parseFloat(total).toFixed(2);
+            document.getElementById('modal_address').textContent = address;
+            document.getElementById('modal_seller').textContent = seller;
+            document.getElementById('modal_date').textContent = date;
+            
+            // Store product id for future actions (reorder/rate)
+            modalProductId = id;
+            
+            // Reset timeline steps
+            ['tl_pending','tl_processing','tl_completed'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('active');
+            });
+            if (status === 'pending') {
+                const el = document.getElementById('tl_pending');
+                if (el) el.classList.add('active');
+            } else if (status === 'processing') {
+                const el = document.getElementById('tl_processing');
+                if (el) el.classList.add('active');
+            } else if (status === 'completed') {
+                const el = document.getElementById('tl_completed');
+                if (el) el.classList.add('active');
+            }
+            
+            let statusBadge = '';
+            if (status === 'pending') {
+                statusBadge = '<span class="order-status status-pending"><i class="bi bi-clock-history me-1"></i>Pending</span>';
+            } else if (status === 'processing') {
+                statusBadge = '<span class="order-status status-processing"><i class="bi bi-arrow-repeat me-1"></i>Processing</span>';
+            } else if (status === 'completed') {
+                statusBadge = '<span class="order-status status-completed"><i class="bi bi-check-circle me-1"></i>Completed</span>';
+            } else {
+                statusBadge = '<span class="order-status status-cancelled"><i class="bi bi-x-circle me-1"></i>Cancelled</span>';
+            }
+            
+            document.getElementById('modal_status').innerHTML = statusBadge;
+            
+            new bootstrap.Modal(document.getElementById('orderDetailsModal')).show();
+        }
+
+        function reorderItem(productId) {
+            if (!productId) return;
+            fetch('/cart/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: productId, quantity: 1 })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    if (window.showToast) showToast('success', data.message || 'Added to cart');
+                    if (window.updateCartBadge) updateCartBadge();
+                } else {
+                    if (window.showToast) showToast('error', data.message || 'Failed to add to cart');
+                }
+            })
+            .catch(() => {
+                if (window.showToast) showToast('error', 'Failed to add to cart');
+            });
+        }
+
+        function reorderFromModal() {
+            if (!modalProductId) return;
+            reorderItem(modalProductId);
+        }
+
+        function contactSupport() {
+            const subject = encodeURIComponent('Order support request');
+            const body = encodeURIComponent('Hi, I need help with one of my orders on Mode S7vn.');
+            window.location.href = `mailto:support@modes7vn.local?subject=${subject}&body=${body}`;
+        }
+
+        function rateItem() {
+            const rating = prompt('Rate this item from 1 to 5 stars (feature coming soon):');
+            if (!rating) return;
+            if (window.showToast) {
+                showToast('info', 'Thanks for your feedback! Ratings will be saved in a future update.');
+            }
+        }
+    </script>
+</body>
+</html>

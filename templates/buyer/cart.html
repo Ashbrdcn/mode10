@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart - Mode7 Shop</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: #050509;
+            color: #f8f9ff;
+        }
+        .page-header {
+            background: rgba(10, 10, 15, 0.96);
+            padding: 24px 0;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .page-header h2,
+        .page-header p {
+            color: #ffffff;
+        }
+        .cart-item {
+            background: rgba(10, 10, 15, 0.96);
+            padding: 16px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .quantity-input {
+            max-width: 80px;
+        }
+        .summary-card {
+            position: sticky;
+            top: 20px;
+        }
+        .text-muted {
+            color: rgba(255,255,255,0.7) !important;
+        }
+        .card,
+        .card-body {
+            background-color: rgba(10,10,15,0.96);
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    {% include 'components/buyer_nav.html' %}
+    
+    <div class="page-header">
+        <div class="container">
+            <h2><i class="bi bi-cart3 me-2"></i>Shopping Cart</h2>
+            <p class="text-muted mb-0">Review your items before checkout</p>
+        </div>
+    </div>
+    
+    <div class="container mb-5">
+        {% if cart_items %}
+        <div class="row">
+            <div class="col-lg-8">
+                <form id="cartSelectForm" method="GET" action="{{ url_for('checkout') }}">
+                <div class="d-flex align-items-center mb-3">
+                    <input class="form-check-input me-2" type="checkbox" id="selectAll" />
+                    <label for="selectAll" class="mb-0">Select All</label>
+                </div>
+                {% for item in cart_items %}
+                <div class="cart-item" data-item-id="{{ item.id }}">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input item-check" type="checkbox" name="selected" value="{{ item.id }}" id="sel-{{ item.id }}" {% if item.stock <= 0 %}disabled{% endif %}>
+                        <label class="form-check-label" for="sel-{{ item.id }}">Select</label>
+                    </div>
+                    <div class="row align-items-center">
+                        <div class="col-md-2 mb-3 mb-md-0">
+                            {% if item.image %}
+                            <img src="{{ url_for('static', filename='products/' + item.image) }}" 
+                                 class="img-fluid rounded" alt="{{ item.name }}"
+                                 onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+                            {% else %}
+                            <div class="bg-light d-flex align-items-center justify-content-center rounded" style="height: 100px;">
+                                <i class="bi bi-image text-muted fs-3"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <h6 class="mb-1">{{ item.name }}</h6>
+                            <p class="text-muted small mb-1">
+                                <i class="bi bi-shop me-1"></i>{{ item.seller_name }}
+                            </p>
+                            <p class="small mb-0">
+                                {% if item.stock > 0 %}
+                                <span class="text-success">
+                                    <i class="bi bi-check-circle me-1"></i>In Stock ({{ item.stock }} available)
+                                </span>
+                                {% else %}
+                                <span class="text-danger">
+                                    <i class="bi bi-x-circle me-1"></i>Out of Stock (cannot checkout)
+                                </span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        
+                        <div class="col-md-3 mb-3 mb-md-0">
+                            <label class="form-label small text-muted">Quantity</label>
+                            {% if item.stock > 0 %}
+                            <div class="input-group input-group-sm">
+                                <button class="btn btn-outline-secondary" type="button" 
+                                        onclick="updateQuantity({{ item.id }}, -1)">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <input type="number" class="form-control text-center quantity-input" 
+                                       value="{{ item.quantity }}" min="1" max="{{ item.stock }}"
+                                       id="qty-{{ item.id }}" readonly>
+                                <button class="btn btn-outline-secondary" type="button"
+                                        onclick="updateQuantity({{ item.id }}, 1)">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                            {% else %}
+                            <p class="small text-muted mb-0">Quantity cannot be changed for out-of-stock items.</p>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-2 mb-3 mb-md-0 text-center">
+                            <label class="form-label small text-muted d-block">Price</label>
+                            <h5 class="mb-0 text-primary item-price" data-price="{{ item.price }}">
+                                ₱{{ "%.2f"|format(item.price * item.quantity) }}
+                            </h5>
+                        </div>
+                        
+                        <div class="col-md-1 text-center">
+                            <div class="d-flex flex-column gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        onclick="removeFromCart({{ item.id }}, '{{ item.name }}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        onclick="saveForLater({{ item.id }}, {{ item.product_id }})">
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                </form>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm summary-card">
+                    <div class="card-body p-4">
+                        <h5 class="mb-4">Order Summary</h5>
+                        
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Selected Subtotal (<span id="selected-count">0</span> items)</span>
+                            <strong id="subtotal-display">₱0.00</strong>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Shipping Fee</span>
+                            <span id="shipping-display">₱0.00</span>
+                        </div>
+                        
+                        <hr class="my-3">
+                        
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Ships from</span>
+                            <span>{{ seller_count }} seller{% if seller_count != 1 %}s{% endif %}</span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mb-4 mt-2">
+                            <strong>Total</strong>
+                            <h4 class="mb-0 text-primary" id="total-display">
+                                ₱0.00
+                            </h4>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button form="cartSelectForm" type="submit" class="btn btn-primary btn-lg" id="proceedBtn" disabled>
+                                <i class="bi bi-credit-card me-2"></i>Proceed to Checkout
+                            </button>
+                            
+                            <a href="{{ url_for('buyer') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Continue Shopping
+                            </a>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3 mb-0 small">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Free shipping on orders over ₱1,000
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <div class="card border-0 shadow-sm mx-auto" style="max-width: 500px;">
+                <div class="card-body p-5">
+                    <i class="bi bi-cart-x text-muted" style="font-size: 80px;"></i>
+                    <h4 class="mt-4">Your cart is empty</h4>
+                    <p class="text-muted">Add some products to your cart and they will show up here.</p>
+                    <a href="{{ url_for('buyer') }}" class="btn btn-primary mt-3">
+                        <i class="bi bi-shop me-2"></i>Start Shopping
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashes = [
+                {% for category, message in messages %}
+                {category: '{{ category }}', message: {{ message|tojson }}},
+                {% endfor %}
+            ];
+            flashes.forEach(f => {
+                let type = 'info';
+                if (f.category === 'success') type = 'success';
+                else if (f.category === 'error' || f.category === 'danger' || f.category === 'warning') type = 'error';
+                if (typeof showToast === 'function') {
+                    showToast(type, f.message);
+                }
+            });
+        });
+    </script>
+    {% endif %}
+    {% endwith %}
+
+    <script>
+        const SHIPPING_FEE = 50;
+
+        function recalcSelection() {
+            const checks = Array.from(document.querySelectorAll('.item-check'));
+            const selected = checks.filter(c => c.checked);
+            let subtotal = 0;
+            selected.forEach(c => {
+                const id = c.value;
+                const row = document.querySelector(`[data-item-id="${id}"]`);
+                const priceEl = row.querySelector('.item-price');
+                const amount = parseFloat(priceEl.textContent.replace('₱','').replace(/,/g,'')) || 0;
+                subtotal += amount;
+            });
+            document.getElementById('selected-count').textContent = selected.length;
+            document.getElementById('subtotal-display').textContent = `₱${subtotal.toFixed(2)}`;
+            const shipping = selected.length > 0 ? SHIPPING_FEE : 0;
+            document.getElementById('shipping-display').textContent = `₱${shipping.toFixed(2)}`;
+            document.getElementById('total-display').textContent = `₱${(subtotal + shipping).toFixed(2)}`;
+            document.getElementById('proceedBtn').disabled = selected.length === 0;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const selectAll = document.getElementById('selectAll');
+            if (selectAll) {
+                selectAll.addEventListener('change', () => {
+                    document.querySelectorAll('.item-check').forEach(c => { c.checked = selectAll.checked; });
+                    recalcSelection();
+                });
+            }
+            document.querySelectorAll('.item-check').forEach(c => c.addEventListener('change', recalcSelection));
+            recalcSelection();
+        });
+
+        function updateQuantity(cartItemId, change) {
+            const input = document.getElementById(`qty-${cartItemId}`);
+            let newQty = parseInt(input.value) + change;
+            const max = parseInt(input.max);
+            
+            if (newQty < 1) newQty = 1;
+            if (newQty > max) {
+                alert(`Only ${max} items available in stock`);
+                return;
+            }
+            
+            fetch(`/cart/update/${cartItemId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ quantity: newQty })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    input.value = newQty;
+                    
+                    const itemRow = document.querySelector(`[data-item-id="${cartItemId}"]`);
+                    const priceElement = itemRow.querySelector('.item-price');
+                    const unitPrice = parseFloat(priceElement.dataset.price);
+                    priceElement.textContent = `₱${(unitPrice * newQty).toFixed(2)}`;
+                    
+                    // Recalculate selection totals so summary always matches current quantities
+                    if (typeof recalcSelection === 'function') {
+                        recalcSelection();
+                    }
+                    
+                    if (typeof updateCartBadge === 'function') {
+                        updateCartBadge();
+                    }
+                } else {
+                    if (typeof showToast === 'function') {
+                        showToast('error', data.message);
+                    } else {
+                        alert(data.message);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (typeof showToast === 'function') {
+                    showToast('error', 'Failed to update cart');
+                } else {
+                    alert('Failed to update cart');
+                }
+            });
+        }
+        
+        function removeFromCart(cartItemId, productName) {
+            if (!confirm(`Remove ${productName} from cart?`)) {
+                return;
+            }
+            fetch(`/cart/remove/${cartItemId}`, {
+                method: 'POST'
+            })
+            .then(() => {
+                if (typeof showToast === 'function') {
+                    showToast('success', 'Item removed from cart');
+                }
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (typeof showToast === 'function') {
+                    showToast('error', 'Failed to remove item');
+                } else {
+                    alert('Failed to remove item');
+                }
+            });
+        }
+        
+        function saveForLater(cartItemId, productId) {
+            fetch('/wishlist/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ product_id: productId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (typeof showToast === 'function') {
+                        showToast('success', data.message || 'Moved to wishlist');
+                    }
+                    // Remove from cart after saving to wishlist
+                    fetch(`/cart/remove/${cartItemId}`, {
+                        method: 'POST'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    if (typeof showToast === 'function') {
+                        showToast('error', data.message || 'Failed to save for later');
+                    } else {
+                        alert(data.message || 'Failed to save for later');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (typeof showToast === 'function') {
+                    showToast('error', 'Failed to save for later');
+                } else {
+                    alert('Failed to save for later');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

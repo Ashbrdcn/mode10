@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.name }} - Mode7 Shop</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: #050509;
+            color: #f8f9ff;
+            min-height: 100vh;
+        }
+        .product-image {
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            max-height: 380px;
+            width: 100%;
+            object-fit: cover;
+        }
+        .product-details-card {
+            background: rgba(10, 10, 15, 0.96);
+            border-radius: 15px;
+            padding: 24px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: #ffffff;
+        }
+        .quantity-selector {
+            max-width: 150px;
+        }
+        .breadcrumb {
+            background-color: transparent;
+            --bs-breadcrumb-divider-color: rgba(255,255,255,0.5);
+        }
+        .breadcrumb-item a {
+            color: rgba(255,255,255,0.75);
+            text-decoration: none;
+        }
+        .breadcrumb-item a:hover {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+        .breadcrumb-item.active {
+            color: #ffffff;
+        }
+        .text-muted {
+            color: rgba(255,255,255,0.7) !important;
+        }
+    </style>
+</head>
+<body>
+    {% include 'components/buyer_nav.html' %}
+    
+    <div class="container mt-3 mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('buyer') }}">Shop</a></li>
+                <li class="breadcrumb-item active">{{ product.name }}</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                {% set main_image = (product_images[0].image if product_images and product_images[0].image else product.image) %}
+                {% if main_image %}
+                <img id="mainProductImage"
+                     src="{{ url_for('static', filename='products/' + main_image) }}" 
+                     class="img-fluid product-image" 
+                     alt="{{ product.name }}"
+                     onerror="this.src='https://via.placeholder.com/600?text=No+Image'">
+                {% else %}
+                <div class="bg-light d-flex align-items-center justify-content-center product-image" style="height: 380px;">
+                    <i class="bi bi-image" style="font-size: 100px; color: #ccc;"></i>
+                </div>
+                {% endif %}
+
+                {% if product_images %}
+                <div class="d-flex gap-2 mt-3">
+                    {% for img in product_images[:4] %}
+                    <img src="{{ url_for('static', filename='products/' + img.image) }}"
+                         class="img-thumbnail"
+                         style="width: 80px; height: 80px; object-fit: cover; cursor: pointer;"
+                         onclick="changeMainImage('{{ url_for('static', filename='products/' + img.image) }}')"
+                         alt="{{ product.name }}">
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="col-lg-6">
+                <div class="product-details-card">
+                    <h1 class="mb-3">{{ product.name }}</h1>
+                    
+                    <div class="mb-3">
+                        <span class="badge bg-primary me-2">{{ product.category or 'Uncategorized' }}</span>
+                        {% if product.stock > 0 %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-check-circle me-1"></i>In Stock
+                        </span>
+                        {% else %}
+                        <span class="badge bg-danger">Out of Stock</span>
+                        {% endif %}
+                    </div>
+                    
+                    <p class="text-muted mb-3">
+                        <i class="bi bi-shop me-1"></i>
+                        Sold by: <strong>{{ product.seller_name }} {{ product.seller_lastname }}</strong>
+                    </p>
+                    
+                    <h2 class="text-primary mb-4">₱{{ "%.2f"|format(product.price) }}</h2>
+                    
+                    {% if product.stock > 0 %}
+                    <p class="text-success mb-4">
+                        <i class="bi bi-box-seam me-1"></i>
+                        {{ product.stock }} items available
+                    </p>
+                    {% endif %}
+
+                    <hr class="my-4">
+
+                    <h5 class="mb-3">Description</h5>
+                    <p class="text-muted">{{ product.description or 'No description available.' }}</p>
+
+                    <div class="mt-4">
+                        <h6 class="mb-2">Product details</h6>
+                        <ul class="list-unstyled mb-0 text-muted">
+                            {% if product.brand %}
+                            <li><strong>Brand:</strong> {{ product.brand }}</li>
+                            {% endif %}
+                            {% if product.size %}
+                            <li><strong>Size:</strong> {{ product.size }}</li>
+                            {% endif %}
+                            {% if product.color %}
+                            <li><strong>Color:</strong> {{ product.color }}</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <hr class="my-4">
+
+                    {% if product.stock > 0 %}
+                    <div class="mb-4">
+                        <label class="form-label">Quantity</label>
+                        <div class="input-group quantity-selector">
+                            <button class="btn btn-outline-secondary" type="button" onclick="changeQty(-1)">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <input type="number" class="form-control text-center" id="quantity" value="1" min="1" max="{{ product.stock }}" readonly>
+                            <button class="btn btn-outline-secondary" type="button" onclick="changeQty(1)">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary btn-lg" onclick="addToCart()">
+                            <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                        </button>
+                        <button class="btn btn-outline-primary btn-lg" onclick="buyNow()">
+                            <i class="bi bi-lightning me-2"></i>Buy Now
+                        </button>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle me-2"></i>
+                        This product is currently out of stock
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if related_products %}
+        <hr class="my-5">
+        <h4 class="mb-4">You might also like</h4>
+        <div class="row">
+            {% for rp in related_products %}
+            <div class="col-md-3 mb-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    {% if rp.image %}
+                    <a href="{{ url_for('product_detail', product_id=rp.id) }}" class="text-decoration-none text-dark">
+                        <img src="{{ url_for('static', filename='products/' + rp.image) }}" class="card-img-top" alt="{{ rp.name }}"
+                             style="height: 180px; object-fit: cover;"
+                             onerror="this.src='https://via.placeholder.com/300x180?text=No+Image'">
+                        <div class="card-body">
+                            <span class="badge bg-secondary mb-2">{{ rp.category or 'Uncategorized' }}</span>
+                            <h6 class="card-title mb-1">{{ rp.name }}</h6>
+                            <p class="card-text text-primary fw-semibold mb-0">₱{{ "%.2f"|format(rp.price) }}</p>
+                        </div>
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('product_detail', product_id=rp.id) }}" class="text-decoration-none text-dark">
+                        <div class="bg-light d-flex align-items-center justify-content-center" style="height: 180px;">
+                            <i class="bi bi-image" style="font-size: 40px; color: #ccc;"></i>
+                        </div>
+                        <div class="card-body">
+                            <span class="badge bg-secondary mb-2">{{ rp.category or 'Uncategorized' }}</span>
+                            <h6 class="card-title mb-1">{{ rp.name }}</h6>
+                            <p class="card-text text-primary fw-semibold mb-0">₱{{ "%.2f"|format(rp.price) }}</p>
+                        </div>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const maxStock = {{ product.stock }};
+
+        function changeMainImage(src) {
+            const mainImg = document.getElementById('mainProductImage');
+            if (mainImg) {
+                mainImg.src = src;
+            }
+        }
+        
+        function changeQty(change) {
+            const input = document.getElementById('quantity');
+            let newQty = parseInt(input.value) + change;
+            
+            if (newQty < 1) newQty = 1;
+            if (newQty > maxStock) {
+                alert(`Only ${maxStock} items available`);
+                newQty = maxStock;
+            }
+            
+            input.value = newQty;
+        }
+
+        function addToCart() {
+            const quantity = parseInt(document.getElementById('quantity').value);
+            
+            return fetch('/cart/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    product_id: {{ product.id }},
+                    quantity: quantity
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (typeof showToast === 'function') {
+                        showToast('success', data.message);
+                    }
+                    if (typeof updateCartBadge === 'function') {
+                        updateCartBadge();
+                    }
+                    return true;
+                } else {
+                    if (typeof showToast === 'function') {
+                        showToast('error', data.message);
+                    }
+                    return false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (typeof showToast === 'function') {
+                    showToast('error', 'Failed to add to cart');
+                }
+                return false;
+            });
+        }
+
+        function buyNow() {
+            addToCart().then(success => {
+                if (success) {
+                    window.location.href = '{{ url_for("view_cart") }}';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

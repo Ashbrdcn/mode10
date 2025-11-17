@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mode S7vn | Premium Men's Apparel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    :root {
+      --bg-dark: #0a0a0a;
+      --bg-card: #1a1a1a;
+      --bg-surface: #141414;
+      --text-main: #ffffff;
+      --text-muted: #a0a0a0;
+      --accent-red: #c24645;
+      --border: #2a2a2a;
+      --success: #28a745;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Poppins', sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    
+    a {
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.3s ease;
+    }
+    
+    /* Premium Navbar */
+    .site-navbar {
+      background-color: rgba(10, 10, 10, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .site-navbar .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-size: 1.2rem;
+    }
+    
+    .site-navbar .navbar-brand img {
+      height: 32px;
+      width: auto;
+      display: block;
+    }
+    
+    .site-navbar .nav-link {
+      position: relative;
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      padding: 0.5rem 1rem;
+      margin: 0 0.2rem;
+      transition: color 0.3s ease;
+    }
+    
+    .site-navbar .nav-link:hover,
+    .site-navbar .nav-link.active {
+      color: var(--text-main);
+    }
+    
+    .site-navbar .nav-link::after {
+      content: "";
+      position: absolute;
+      left: 15%;
+      right: 15%;
+      bottom: -2px;
+      height: 2px;
+      background-color: var(--accent-red);
+      transform: scaleX(0);
+      transform-origin: center;
+      transition: transform 0.3s ease;
+    }
+    
+    .site-navbar .nav-link:hover::after,
+    .site-navbar .nav-link.active::after {
+      transform: scaleX(1);
+    }
+    
+    .site-navbar .navbar-toggler {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.4rem 0.6rem;
+    }
+    
+    .site-navbar .navbar-toggler-icon {
+      filter: invert(1);
+    }
+    
+    .site-navbar .btn-pill {
+      border-radius: 50px;
+      padding: 0.5rem 1.2rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    
+    .site-navbar .cart-icon {
+      position: relative;
+    }
+    
+    .site-navbar .cart-count {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background-color: var(--accent-red);
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Auth Pages Common Styles */
+    .auth-wrapper {
+      min-height: calc(100vh - 80px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem 0.75rem;
+    }
+    
+    .glass-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      max-width: 1300px;
+      width: 95vw;
+      margin: 0 auto;
+    }
+    
+    .left-pane {
+      background: linear-gradient(135deg, var(--bg-surface) 0%, rgba(194, 70, 69, 0.1) 100%);
+      height: 100%;
+      min-height: 560px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    
+    .brand-logo {
+      max-width: 260px;
+      height: auto;
+      filter: brightness(0) invert(1);
+    }
+    
+    .auth-title {
+      font-weight: 700;
+      letter-spacing: .3px;
+      font-size: 1.9rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .google-btn {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-weight: 600;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-radius: 10px;
+      transition: all 0.25s;
+      width: 100%;
+    }
+    
+    .google-btn:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      text-decoration: none;
+      color: var(--text-main);
+    }
+    
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 20px 0;
+    }
+    
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .divider span {
+      padding: 0 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    
+    .form-control, .form-select {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+    
+    .form-control:focus, .form-select:focus {
+      background-color: var(--bg-surface);
+      border-color: var(--accent-red);
+      color: var(--text-main);
+      box-shadow: 0 0 0 0.25rem rgba(194, 70, 69, 0.25);
+    }
+    
+    .form-label {
+      color: var(--text-main);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    
+    .btn-primary-custom {
+      background-color: var(--accent-red);
+      border-color: var(--accent-red);
+      color: white;
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-primary-custom:hover {
+      background-color: #a83a39;
+      border-color: #a83a39;
+    }
+    
+    .btn-outline-secondary {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 0 10px 10px 0;
+    }
+    
+    .btn-outline-secondary:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      border-color: var(--border);
+    }
+    
+    .alert {
+      border-radius: 10px;
+      border: none;
+    }
+    
+    .alert-danger {
+      background-color: rgba(194, 70, 69, 0.1);
+      color: #ff6b6b;
+      border-left: 4px solid var(--accent-red);
+    }
+    
+    .alert-warning {
+      background-color: rgba(255, 193, 7, 0.1);
+      color: #ffd166;
+      border-left: 4px solid #ffc107;
+    }
+    
+    .alert-info {
+      background-color: rgba(23, 162, 184, 0.1);
+      color: #4dabf7;
+      border-left: 4px solid #17a2b8;
+    }
+    
+    .text-center a {
+      color: var(--accent-red);
+      transition: color 0.3s ease;
+    }
+    
+    .text-center a:hover {
+      color: #ff6b6b;
+    }
+    
+    /* Signup-specific styles */
+    .form-section {
+      background: var(--bg-surface);
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+    }
+    
+    .form-section h5 {
+      margin-bottom: 15px;
+      color: var(--text-main);
+      font-weight: 700;
+    }
+    
+    .loading-spinner {
+      display: inline-block;
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid var(--border);
+      border-top: 2px solid var(--accent-red);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 10px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .account-type-fields {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .account-type-fields h6 {
+      color: var(--text-main);
+      margin-bottom: 1rem;
+    }
+
+    /* Make helper / muted texts brighter for readability */
+    .text-muted,
+    .form-text.text-muted,
+    small.text-muted {
+      color: #ffffff !important;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .left-pane {
+        min-height: 200px;
+        padding: 1.5rem;
+      }
+      
+      .brand-logo {
+        max-width: 180px;
+      }
+      
+      .glass-card {
+        border-radius: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Premium Dark Navbar -->
+  <nav class="navbar navbar-expand-lg site-navbar">
+    <div class="container">
+      <a class="navbar-brand" href="{{ url_for('landing') }}">
+        <img src="{{ url_for('static', filename='products/modelogo.png') }}" alt="Mode S7vn logo">
+        <span>MODE S7VN</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-1">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('landing') }}">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('signup') }}">Create Account</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Signup Section -->
+  <div class="auth-wrapper" id="signupSection">
+    <div class="glass-card">
+      <!-- Full-width Signup Form -->
+      <div class="p-4 p-md-5">
+        <h2 class="mb-3 auth-title text-center">Create an Account</h2>
+          
+          <!-- Flash messages -->
+          <div class="alert alert-danger" role="alert" id="signupFlashMessage" style="display: none;">
+            This is a sample error message. In the actual implementation, this would show real flash messages.
+          </div>
+
+          <!-- Sign Up Form -->
+          <form method="POST" enctype="multipart/form-data" id="signupForm">
+            
+            <!-- Personal Information -->
+            <div class="form-section">
+              <h5>Personal Information</h5>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="first_name" class="form-label">First Name *</label>
+                  <input type="text" class="form-control" id="first_name" name="first_name" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="last_name" class="form-label">Last Name *</label>
+                  <input type="text" class="form-control" id="last_name" name="last_name" required>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="signup_email" class="form-label">Email *</label>
+                <input type="email" class="form-control" id="signup_email" name="email" required>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="signup_password" class="form-label">Password *</label>
+                  <input type="password" class="form-control" id="signup_password" name="password" minlength="6" required>
+                  <small id="password_help" class="form-text text-muted">At least 6 characters.</small>
+                  <div id="password_strength" class="mt-1 small"></div>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="confirm_password" class="form-label">Confirm Password *</label>
+                  <input type="password" class="form-control" id="confirm_password" name="confirm_password" minlength="6" required>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="phone" class="form-label">Phone Number *</label>
+                <input type="text" class="form-control" id="phone" name="phone" placeholder="09XXXXXXXXX" required>
+              </div>
+            </div>
+
+            <!-- Address Information -->
+            <div class="form-section">
+              <h5>Address Information</h5>
+              
+              <div class="mb-3">
+                <label for="region" class="form-label">
+                  Region *
+                  <span id="region-loading" class="loading-spinner" style="display:none;"></span>
+                </label>
+                <select class="form-select" id="region" name="region" required>
+                  <option value="">Loading regions...</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="province" class="form-label">
+                  Province *
+                  <span id="province-loading" class="loading-spinner" style="display:none;"></span>
+                </label>
+                <select class="form-select" id="province" name="province" required disabled>
+                  <option value="">Select Region first</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="municipality" class="form-label">
+                  City/Municipality *
+                  <span id="municipality-loading" class="loading-spinner" style="display:none;"></span>
+                </label>
+                <select class="form-select" id="municipality" name="municipality" required disabled>
+                  <option value="">Select Province first</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="barangay" class="form-label">
+                  Barangay *
+                  <span id="barangay-loading" class="loading-spinner" style="display:none;"></span>
+                </label>
+                <select class="form-select" id="barangay" name="barangay" required disabled>
+                  <option value="">Select City/Municipality first</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="street" class="form-label">Street/Building/House No. (Optional)</label>
+                <input type="text" class="form-control" id="street" name="street" placeholder="e.g., 123 Main St, Bldg 5, Unit 2A">
+              </div>
+
+              <div class="mb-3">
+                <label for="zip_code" class="form-label">Zip Code (Optional)</label>
+                <input type="text" class="form-control" id="zip_code" name="zip_code" placeholder="e.g., 1100">
+              </div>
+            </div>
+
+            <!-- Account Information -->
+            <div class="form-section">
+              <h5>Account Information</h5>
+              
+              <div class="mb-3">
+                <label for="account_type" class="form-label">Account Type *</label>
+                <select class="form-select" id="account_type" name="account_type" required>
+                  <option value="">Select Account Type</option>
+                  <option value="buyer">Buyer</option>
+                  <option value="seller">Seller</option>
+                  <option value="rider">Rider</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="valid_id" class="form-label">Valid ID *</label>
+                <input type="file" class="form-control" id="valid_id" name="valid_id" accept="image/*,.pdf" required>
+                <small class="text-muted">Upload a clear photo of your government-issued ID</small>
+              </div>
+
+              <!-- Seller-only fields -->
+              <div id="seller-fields" class="account-type-fields d-none">
+                <h6 class="mb-3">Seller Details</h6>
+                <div class="mb-3">
+                  <label for="store_name" class="form-label">Store Name *</label>
+                  <input type="text" class="form-control" id="store_name" name="store_name" placeholder="Your store name">
+                </div>
+                <div class="mb-3">
+                  <label for="product_category" class="form-label">Product Category *</label>
+                  <select class="form-select" id="product_category" name="product_category">
+                    <option value="">Select a category</option>
+                    <option value="Suits & Blazers">Suits & Blazers</option>
+                    <option value="Casual Shirts & Pants">Casual Shirts & Pants</option>
+                    <option value="Outerwear & Jackets">Outerwear & Jackets</option>
+                    <option value="Activewear & Fitness Gear">Activewear & Fitness Gear</option>
+                    <option value="Shoes & Accessories">Shoes & Accessories</option>
+                    <option value="Grooming Products">Grooming Products</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="business_permit" class="form-label">Business Permit (image or PDF) *</label>
+                  <input type="file" class="form-control" id="business_permit" name="business_permit" accept="image/*,.pdf">
+                  <small class="text-muted">Upload your valid business permit</small>
+                </div>
+              </div>
+
+              <!-- Rider-only fields -->
+              <div id="rider-fields" class="account-type-fields d-none">
+                <h6 class="mb-3">Rider Documents</h6>
+                <div class="mb-3">
+                  <label for="orcr_image" class="form-label">ORCR (image only) *</label>
+                  <input type="file" class="form-control" id="orcr_image" name="orcr_image" accept="image/*">
+                </div>
+                <div class="mb-3">
+                  <label for="vehicle_plate_image" class="form-label">Vehicle Photo showing Plate Number (image only) *</label>
+                  <input type="file" class="form-control" id="vehicle_plate_image" name="vehicle_plate_image" accept="image/*">
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary-custom btn-lg w-100">Sign Up</button>
+            
+            <div class="text-center mt-3">
+              <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+            </div>
+          </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Password toggle functionality for login (safe even if login fields are absent)
+    const toggleBtn = document.getElementById('togglePassword');
+    const pwInput = document.getElementById('password');
+    if (toggleBtn && pwInput) {
+      toggleBtn.addEventListener('click', () => {
+        const isText = pwInput.type === 'text';
+        pwInput.type = isText ? 'password' : 'text';
+        toggleBtn.textContent = isText ? 'Show' : 'Hide';
+      });
+    }
+    
+    // Sample flash message handling (would be replaced with actual backend integration)
+    document.addEventListener('DOMContentLoaded', function() {
+      // In a real implementation, this would be handled by your backend templating
+      // For demo purposes, we'll simulate different flash messages
+      const loginFlash = document.getElementById('loginFlashMessage');
+      const signupFlash = document.getElementById('signupFlashMessage');
+      
+      // Uncomment the lines below to test different flash message types
+      // loginFlash.className = 'alert alert-warning';
+      // loginFlash.textContent = 'This is a warning message.';
+      
+      // loginFlash.className = 'alert alert-info';
+      // loginFlash.textContent = 'This is an info message.';
+      
+      // To hide the flash message after 5 seconds
+      setTimeout(() => {
+        if (loginFlash) loginFlash.style.display = 'none';
+        if (signupFlash) signupFlash.style.display = 'none';
+      }, 5000);
+    });
+
+    // ========== SIGNUP FORM FUNCTIONALITY ==========
+
+    // PSGC API Base URL
+    const API_BASE = 'https://psgc.gitlab.io/api';
+
+    // Helper function to show loading spinner
+    function showLoading(elementId, show) {
+      const spinner = document.getElementById(elementId);
+      if (spinner) {
+        spinner.style.display = show ? 'inline-block' : 'none';
+      }
+    }
+
+    // Helper function to populate select options
+    function populateSelect(selectElement, data, placeholder) {
+      selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+      
+      if (!data || data.length === 0) {
+        selectElement.innerHTML = '<option value="">No data available</option>';
+        return;
+      }
+
+      // Sort alphabetically by name
+      data.sort((a, b) => a.name.localeCompare(b.name));
+      
+      data.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.code;
+        option.textContent = item.name;
+        selectElement.appendChild(option);
+      });
+    }
+
+    // Show/hide seller/rider fields based on account type
+    function updateAccountFields() {
+      const type = document.getElementById('account_type')?.value;
+      const seller = document.getElementById('seller-fields');
+      const rider = document.getElementById('rider-fields');
+      const storeName = document.getElementById('store_name');
+      const productCategory = document.getElementById('product_category');
+      const businessPermit = document.getElementById('business_permit');
+      const orcrImage = document.getElementById('orcr_image');
+      const vehiclePlateImage = document.getElementById('vehicle_plate_image');
+
+      if (seller) seller.classList.add('d-none');
+      if (rider) rider.classList.add('d-none');
+      [storeName, productCategory, businessPermit, orcrImage, vehiclePlateImage].forEach(el => { if (el) el.required = false; });
+
+      if (type === 'seller') {
+        if (seller) seller.classList.remove('d-none');
+        if (storeName) storeName.required = true;
+        if (productCategory) productCategory.required = true;
+        if (businessPermit) businessPermit.required = true;
+      } else if (type === 'rider') {
+        if (rider) rider.classList.remove('d-none');
+        if (orcrImage) orcrImage.required = true;
+        if (vehiclePlateImage) vehiclePlateImage.required = true;
+      }
+    }
+
+    // Init on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const accountTypeSelect = document.getElementById('account_type');
+      if (accountTypeSelect) {
+        accountTypeSelect.addEventListener('change', updateAccountFields);
+        updateAccountFields();
+      }
+      const pw = document.getElementById('signup_password');
+      if (pw) {
+        pw.addEventListener('input', () => updatePasswordStrength(pw.value));
+        updatePasswordStrength(pw.value || '');
+      }
+      // Load PSGC regions on initial page load
+      if (document.getElementById('region')) {
+        loadRegions();
+      }
+    });
+
+    // Load Regions
+    async function loadRegions() {
+      showLoading('region-loading', true);
+      const regionSelect = document.getElementById('region');
+      
+      try {
+        const response = await fetch(`${API_BASE}/regions/`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const regions = await response.json();
+        console.log('Loaded regions:', regions.length);
+        
+        populateSelect(regionSelect, regions, 'Select Region');
+        
+      } catch (error) {
+        console.error('Error loading regions:', error);
+        regionSelect.innerHTML = '<option value="">Error loading regions - Please refresh</option>';
+        alert('Failed to load regions. Please check your internet connection and refresh the page.');
+      } finally {
+        showLoading('region-loading', false);
+      }
+    }
+
+    // Load Provinces when Region is selected
+    document.getElementById('region').addEventListener('change', async function() {
+      const regionCode = this.value;
+      const provinceSelect = document.getElementById('province');
+      const municipalitySelect = document.getElementById('municipality');
+      const barangaySelect = document.getElementById('barangay');
+      
+      provinceSelect.innerHTML = '<option value="">Select Province</option>';
+      municipalitySelect.innerHTML = '<option value="">Select City/Municipality</option>';
+      barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
+      provinceSelect.disabled = true;
+      municipalitySelect.disabled = true;
+      barangaySelect.disabled = true;
+      
+      if (!regionCode) return;
+      
+      showLoading('province-loading', true);
+      
+      try {
+        const response = await fetch(`${API_BASE}/regions/${regionCode}/provinces/`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const provinces = await response.json();
+        console.log('Loaded provinces:', provinces.length);
+        
+        populateSelect(provinceSelect, provinces, 'Select Province');
+        provinceSelect.disabled = false;
+        
+      } catch (error) {
+        console.error('Error loading provinces:', error);
+        provinceSelect.innerHTML = '<option value="">Error loading provinces</option>';
+        alert('Failed to load provinces. Please try selecting the region again.');
+      } finally {
+        showLoading('province-loading', false);
+      }
+    });
+
+    // Load Municipalities when Province is selected
+    document.getElementById('province').addEventListener('change', async function() {
+      const provinceCode = this.value;
+      const municipalitySelect = document.getElementById('municipality');
+      const barangaySelect = document.getElementById('barangay');
+      
+      municipalitySelect.innerHTML = '<option value="">Select City/Municipality</option>';
+      barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
+      municipalitySelect.disabled = true;
+      barangaySelect.disabled = true;
+      
+      if (!provinceCode) return;
+      
+      showLoading('municipality-loading', true);
+      
+      try {
+        const response = await fetch(`${API_BASE}/provinces/${provinceCode}/cities-municipalities/`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const municipalities = await response.json();
+        console.log('Loaded municipalities:', municipalities.length);
+        
+        populateSelect(municipalitySelect, municipalities, 'Select City/Municipality');
+        municipalitySelect.disabled = false;
+        
+      } catch (error) {
+        console.error('Error loading municipalities:', error);
+        municipalitySelect.innerHTML = '<option value="">Error loading cities/municipalities</option>';
+        alert('Failed to load cities/municipalities. Please try selecting the province again.');
+      } finally {
+        showLoading('municipality-loading', false);
+      }
+    });
+
+    function evaluatePasswordStrength(pw) {
+      let score = 0;
+      if (pw.length >= 6) score++;
+      if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+      if (/\d/.test(pw)) score++;
+      if (/[^A-Za-z0-9]/.test(pw)) score++;
+      let label = 'Too short', color = 'text-danger';
+      if (pw.length < 6) { label = 'At least 6 characters required'; color = 'text-danger'; }
+      else if (score <= 1) { label = 'Weak'; color = 'text-danger'; }
+      else if (score === 2) { label = 'Fair'; color = 'text-warning'; }
+      else if (score === 3) { label = 'Good'; color = 'text-info'; }
+      else { label = 'Strong'; color = 'text-success'; }
+      return { label, color };
+    }
+
+    function updatePasswordStrength(pw) {
+      const el = document.getElementById('password_strength');
+      if (!el) return;
+      const { label, color } = evaluatePasswordStrength(pw);
+      el.className = `mt-1 small ${color}`;
+      el.textContent = label;
+    }
+
+    // Load Barangays when Municipality is selected
+    document.getElementById('municipality').addEventListener('change', async function() {
+      const municipalityCode = this.value;
+      const barangaySelect = document.getElementById('barangay');
+      
+      barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
+      barangaySelect.disabled = true;
+      
+      if (!municipalityCode) return;
+      
+      showLoading('barangay-loading', true);
+      
+      try {
+        const response = await fetch(`${API_BASE}/cities-municipalities/${municipalityCode}/barangays/`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const barangays = await response.json();
+        console.log('Loaded barangays:', barangays.length);
+        
+        populateSelect(barangaySelect, barangays, 'Select Barangay');
+        barangaySelect.disabled = false;
+        
+      } catch (error) {
+        console.error('Error loading barangays:', error);
+        barangaySelect.innerHTML = '<option value="">Error loading barangays</option>';
+        alert('Failed to load barangays. Please try selecting the city/municipality again.');
+      } finally {
+        showLoading('barangay-loading', false);
+      }
+    });
+
+    // Form validation
+    document.getElementById('signupForm').addEventListener('submit', function(e) {
+      const password = document.getElementById('signup_password').value;
+      const confirmPassword = document.getElementById('confirm_password').value;
+      
+      if (password.length < 6) {
+        e.preventDefault();
+        alert('Password must be at least 6 characters.');
+        return false;
+      }
+      if (password !== confirmPassword) {
+        e.preventDefault();
+        alert('Passwords do not match!');
+        return false;
+      }
+
+      const region = document.getElementById('region').value;
+      const province = document.getElementById('province').value;
+      const municipality = document.getElementById('municipality').value;
+      const barangay = document.getElementById('barangay').value;
+      
+      if (!region || !province || !municipality || !barangay) {
+        e.preventDefault();
+        alert('Please complete all address fields (Region, Province, City/Municipality, and Barangay)');
+        return false;
+      }
+    });
+  </script>
+</body>
+</html>

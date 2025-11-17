@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Registration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .form-section h5 {
+            margin-bottom: 15px;
+            color: #495057;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    {% include 'landingnav.html' %}
+    
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="alert alert-info">
+                    <strong>Welcome!</strong> Please complete your profile. Your account will be reviewed by an admin before you can access the system.
+                </div>
+                
+                <h2>Complete Your Registration</h2>
+                <p class="text-muted">Hello {{ first_name }}! Just a few more details to get started.</p>
+                
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST" enctype="multipart/form-data" id="signupForm">
+                    <div class="form-section">
+                        <h5>Account Information</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" value="{{ first_name }} {{ last_name }}" disabled>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" value="{{ email }}" disabled>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="account_type" class="form-label">Account Type *</label>
+                            <select class="form-select" id="account_type" name="account_type" required>
+                                <option value="">Select account type</option>
+                                <option value="buyer">Buyer</option>
+                                <option value="seller">Seller</option>
+                                <option value="rider">Rider</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Phone Number *</label>
+                            <input type="text" class="form-control" id="phone" name="phone" placeholder="09XXXXXXXXX" required>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h5>Address Information</h5>
+                        
+                        <div class="mb-3">
+                            <label for="region" class="form-label">
+                                Region *
+                                <span id="region-loading" class="loading-spinner" style="display:none;"></span>
+                            </label>
+                            <select class="form-select" id="region" name="region" required>
+                                <option value="">Loading regions...</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="province" class="form-label">
+                                Province *
+                                <span id="province-loading" class="loading-spinner" style="display:none;"></span>
+                            </label>
+                            <select class="form-select" id="province" name="province" required disabled>
+                                <option value="">Select Region first</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="municipality" class="form-label">
+                                City/Municipality *
+                                <span id="municipality-loading" class="loading-spinner" style="display:none;"></span>
+                            </label>
+                            <select class="form-select" id="municipality" name="municipality" required disabled>
+                                <option value="">Select Province first</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="barangay" class="form-label">
+                                Barangay *
+                                <span id="barangay-loading" class="loading-spinner" style="display:none;"></span>
+                            </label>
+                            <select class="form-select" id="barangay" name="barangay" required disabled>
+                                <option value="">Select City/Municipality first</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="street" class="form-label">Street/Building/House No. (Optional)</label>
+                            <input type="text" class="form-control" id="street" name="street" placeholder="e.g., 123 Main St, Bldg 5, Unit 2A">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="zip_code" class="form-label">Zip Code (Optional)</label>
+                            <input type="text" class="form-control" id="zip_code" name="zip_code" placeholder="e.g., 1100">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h5>Verification</h5>
+                        <div class="mb-3">
+                            <label for="valid_id" class="form-label">Valid ID *</label>
+                            <input type="file" class="form-control" id="valid_id" name="valid_id" accept="image/*,.pdf" required>
+                            <small class="text-muted">Upload a clear photo of your government-issued ID</small>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100">Submit for Approval</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // PSGC API Base URL
+        const API_BASE = 'https://psgc.gitlab.io/api';
+
+        // Helper function to show loading spinner
+        function showLoading(elementId, show) {
+            const spinner = document.getElementById(elementId);
+            if (spinner) {
+                spinner.style.display = show ? 'inline-block' : 'none';
+            }
+        }
+
+        // Helper function to populate select options
+        function populateSelect(selectElement, data, placeholder) {
+            selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+            
+            if (!data || data.length === 0) {
+                selectElement.innerHTML = '<option value="">No data available</option>';
+                return;
+            }
+
+            // Sort alphabetically by name
+            data.sort((a, b) => a.name.localeCompare(b.name));
+            
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.code;
+                option.textContent = item.name;
+                option.dataset.name = item.name; // Store name for easy access
+                selectElement.appendChild(option);
+            });
+        }
+
+        // Load Regions on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRegions();
+        });
+
+        // Load Regions
+        async function loadRegions() {
+            showLoading('region-loading', true);
+            const regionSelect = document.getElementById('region');
+            
+            try {
+                const response = await fetch(`${API_BASE}/regions/`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const regions = await response.json();
+                console.log('Loaded regions:', regions.length); // Debug
+                
+                populateSelect(regionSelect, regions, 'Select Region');
+                
+            } catch (error) {
+                console.error('Error loading regions:', error);
+                regionSelect.innerHTML = '<option value="">Error loading regions - Please refresh</option>';
+                alert('Failed to load regions. Please check your internet connection and refresh the page.');
+            } finally {
+                showLoading('region-loading', false);
+            }
+        }
+
+        // Load Provinces when Region is selected
+        document.getElementById('region').addEventListener('change', async function() {
+            const regionCode = this.value;
+            const provinceSelect = document.getElementById('province');
+            const municipalitySelect = document.getElementById('municipality');
+            const barangaySelect = document.getElementById('barangay');
+            
+            // Reset dependent fields
+            provinceSelect.innerHTML = '<option value="">Select Province</option>';
+            municipalitySelect.innerHTML = '<option value="">Select City/Municipality</option>';
+            barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
+            provinceSelect.disabled = true;
+            municipalitySelect.disabled = true;
+            barangaySelect.disabled = true;
+            
+            if (!regionCode) return;
+            
+            showLoading('province-loading', true);
+            
+            try {
+                const response = await fetch(`${API_BASE}/regions/${regionCode}/provinces/`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const provinces = await response.json();
+                console.log('Loaded provinces:', provinces.length); // Debug
+                
+                populateSelect(provinceSelect, provinces, 'Select Province');
+                provinceSelect.disabled = false;
+                
+            } catch (error) {
+                console.error('Error loading provinces:', error);
+                provinceSelect.innerHTML = '<option value="">Error loading provinces</option>';
+                alert('Failed to load provinces. Please try selecting the region again.');
+            } finally {
+                showLoading('province-loading', false);
+            }
+        });
+
+        // Load Municipalities when Province is selected
+        document.getElementById('province').addEventListener('change', async function() {
+            const provinceCode = this.value;
+            const municipalitySelect = document.getElementById('municipality');
+            const barangaySelect = document.getElementById('barangay');
+            
+            // Reset dependent fields
+            municipalitySelect.innerHTML = '<option value="">Select City/Municipality</option>';
+            barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
+            municipalitySelect.disabled = true;
+            barangaySelect.disabled = true;
+            
+            if (!provinceCode) return;
+            
+            showLoading('municipality-loading', true);
+            
+            try {
+                const response = await fetch(`${API_BASE}/provinces/${provinceCode}/cities-municipalities/`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const municipalities = await response.json();
+                console.log('Loaded municipalities:', municipalities.length); // Debug
+                
+                populateSelect(municipalitySelect, municipalities, 'Select City/Municipality');
+                municipalitySelect.disabled = false;
+                
+            } catch (error) {
+                console.error('Error loading municipalities:', error);
+                municipalitySelect.innerHTML = '<option value="">Error loading cities/municipalities</option>';
+                alert('Failed to load cities/municipalities. Please try selecting the province again.');
+            } finally {
+                showLoading('municipality-loading', false);
+            }
+        });
+
+        // Load Barangays when Municipality is selected
+        document.getElementById('municipality').addEventListener('change', async function() {
+            const municipalityCode = this.value;
+            const barangaySelect = document.getElementById('barangay');
+            
+            // Reset barangay field
+            barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
+            barangaySelect.disabled = true;
+            
+            if (!municipalityCode) return;
+            
+            showLoading('barangay-loading', true);
+            
+            try {
+                const response = await fetch(`${API_BASE}/cities-municipalities/${municipalityCode}/barangays/`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const barangays = await response.json();
+                console.log('Loaded barangays:', barangays.length); // Debug
+                
+                populateSelect(barangaySelect, barangays, 'Select Barangay');
+                barangaySelect.disabled = false;
+                
+            } catch (error) {
+                console.error('Error loading barangays:', error);
+                barangaySelect.innerHTML = '<option value="">Error loading barangays</option>';
+                alert('Failed to load barangays. Please try selecting the city/municipality again.');
+            } finally {
+                showLoading('barangay-loading', false);
+            }
+        });
+
+        // Form validation before submit
+        document.getElementById('signupForm').addEventListener('submit', function(e) {
+            const region = document.getElementById('region').value;
+            const province = document.getElementById('province').value;
+            const municipality = document.getElementById('municipality').value;
+            const barangay = document.getElementById('barangay').value;
+            
+            if (!region || !province || !municipality || !barangay) {
+                e.preventDefault();
+                alert('Please complete all address fields (Region, Province, City/Municipality, and Barangay)');
+                return false;
+            }
+        });
+    </script>
+</body>
+</html>

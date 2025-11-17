@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: #050509;
+            color: #f8f9ff;
+        }
+        .card {
+            background: rgba(10, 10, 15, 0.96);
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+        }
+        .text-muted {
+            color: rgba(255,255,255,0.7) !important;
+        }
+        .recent-orders-table th,
+        .recent-orders-table td {
+            border-color: rgba(255,255,255,0.08) !important;
+        }
+        .recent-orders-table thead th {
+            color: #f8f9ff;
+        }
+        .analytics-card-body {
+            max-height: none;
+            overflow: visible;
+        }
+        .analytics-chart {
+            width: 100% !important;
+            height: 140px !important;
+            max-height: 180px;
+        }
+    </style>
+</head>
+<body>
+    {% include 'components/seller_nav.html' %}
+    
+    <div class="main-content">
+        <div class="top-bar">
+            <h5>Dashboard</h5>
+            <div class="user-info">
+                <div>
+                    <div style="font-weight: 600; font-size: 14px;">{{ session.first_name }} {{ session.get('last_name', '') }}</div>
+                    <div style="font-size: 12px; color: #666;">Seller Account</div>
+                </div>
+                <div class="user-avatar">{{ session.first_name[0] }}{{ session.get('last_name', ' ')[0] }}</div>
+            </div>
+        </div>
+
+        <div style="padding: 24px;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const flashes = [
+                        {% for category, message in messages %}
+                        {category: '{{ category }}', message: {{ message|tojson }}},
+                        {% endfor %}
+                    ];
+                    flashes.forEach(f => {
+                        let type = 'info';
+                        if (f.category === 'success') type = 'success';
+                        else if (f.category === 'error' || f.category === 'danger' || f.category === 'warning') type = 'error';
+                        if (window.showToast) {
+                            window.showToast(type, f.message);
+                        }
+                    });
+                });
+            </script>
+            {% endif %}
+            {% endwith %}
+
+            <h2 class="mb-4">Dashboard Overview</h2>
+            
+            <!-- Stats Cards -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div style="width: 50px; height: 50px; border-radius: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+                                        <i class="bi bi-box-seam"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h3 class="mb-0">{{ total_products }}</h3>
+                                    <p class="text-muted mb-0">Active listings in your store</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div style="width: 50px; height: 50px; border-radius: 10px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+                                        <i class="bi bi-cart-check"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h3 class="mb-0">{{ total_orders }}</h3>
+                                    <p class="text-muted mb-0">All orders placed for your products</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div style="width: 50px; height: 50px; border-radius: 10px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+                                        <i class="bi bi-currency-dollar"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h3 class="mb-0">₱{{ "%.2f"|format(total_revenue) }}</h3>
+                                    <p class="text-muted mb-0">Revenue from completed orders</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div style="width: 50px; height: 50px; border-radius: 10px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+                                        <i class="bi bi-clock-history"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h3 class="mb-0">{{ pending_orders }}</h3>
+                                    <p class="text-muted mb-0">Orders waiting for your confirmation or processing</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="mb-3">Quick Actions</h5>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a href="{{ url_for('seller_products') }}" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle me-2"></i>Manage Products
+                                </a>
+                                <a href="{{ url_for('seller_orders') }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-cart-check me-2"></i>View Orders
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports & Analytics -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body p-3 analytics-card-body">
+                            <h5 class="mb-2">Reports &amp; Analytics</h5>
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <div class="small text-muted mb-1">Sales last 7 days</div>
+                                    <canvas id="salesChart" class="analytics-chart"></canvas>
+                                </div>
+                                <div class="col-6 mt-2">
+                                    <div class="small text-muted mb-1">Revenue by category</div>
+                                    <canvas id="categoryChart" class="analytics-chart"></canvas>
+                                </div>
+                                <div class="col-6 mt-2">
+                                    <div class="small text-muted mb-1">Orders by status</div>
+                                    <canvas id="statusChart" class="analytics-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Orders -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="mb-0">Recent Orders</h5>
+                                <a href="{{ url_for('seller_orders') }}" class="small text-muted text-decoration-none">
+                                    View all orders <i class="bi bi-arrow-right-short"></i>
+                                </a>
+                            </div>
+                            {% if recent_orders %}
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0 recent-orders-table">
+                                    <thead>
+                                        <tr class="text-muted">
+                                            <th>Order #</th>
+                                            <th>Product</th>
+                                            <th>Buyer</th>
+                                            <th>Status</th>
+                                            <th class="text-end">Total</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for ro in recent_orders %}
+                                        <tr>
+                                            <td><span class="fw-semibold">{{ ro.order_number }}</span></td>
+                                            <td>{{ ro.product_name }}</td>
+                                            <td>{{ ro.buyer_first_name }} {{ ro.buyer_last_name }}</td>
+                                            <td>
+                                                {% if ro.status == 'pending' %}
+                                                <span class="badge bg-warning text-dark">Pending</span>
+                                                {% elif ro.status == 'processing' %}
+                                                <span class="badge bg-primary">Processing</span>
+                                                {% elif ro.status == 'completed' %}
+                                                <span class="badge bg-success">Completed</span>
+                                                {% else %}
+                                                <span class="badge bg-danger">Cancelled</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end pe-4">₱{{ "%.2f"|format(ro.total_price) }}</td>
+                                            <td class="small ps-2">{{ ro.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <p class="text-muted mb-0">No orders yet. New orders will appear here once buyers purchase your products.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function() {
+            const statusData = {{ chart_status_data|tojson }};
+            const salesLabels = {{ chart_sales_labels|tojson }};
+            const salesData = {{ chart_sales_data|tojson }};
+            const categoryLabels = {{ chart_category_labels|tojson }};
+            const categoryData = {{ chart_category_data|tojson }};
+
+            // Sales line chart
+            const salesCtx = document.getElementById('salesChart');
+            if (salesCtx && Array.isArray(salesLabels) && salesLabels.length) {
+                new Chart(salesCtx, {
+                    type: 'line',
+                    data: {
+                        labels: salesLabels,
+                        datasets: [{
+                            label: 'Sales (₱)',
+                            data: salesData,
+                            borderColor: '#60a5fa',
+                            backgroundColor: 'rgba(96,165,250,0.2)',
+                            tension: 0.3,
+                            fill: true,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#93c5fd'
+                        }]
+                    },
+                    options: {
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: {
+                                ticks: { color: 'rgba(248,249,255,0.8)' },
+                                grid: { color: 'rgba(148,163,184,0.2)' }
+                            },
+                            y: {
+                                ticks: { color: 'rgba(248,249,255,0.8)' },
+                                grid: { color: 'rgba(148,163,184,0.2)' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Category pie chart
+            const catCtx = document.getElementById('categoryChart');
+            if (catCtx && Array.isArray(categoryLabels) && categoryLabels.length) {
+                const palette = ['#22c55e','#3b82f6','#eab308','#ec4899','#8b5cf6','#f97316'];
+                new Chart(catCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: categoryLabels,
+                        datasets: [{
+                            data: categoryData,
+                            backgroundColor: categoryLabels.map((_, i) => palette[i % palette.length]),
+                            borderColor: '#020617',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            legend: {
+                                labels: { color: 'rgba(248,249,255,0.9)', boxWidth: 10 }
+                            }
+                        },
+                        cutout: '60%',
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+
+            // Status pie chart
+            const statusCtx = document.getElementById('statusChart');
+            if (statusCtx && statusData) {
+                const labels = ['Pending','Processing','Completed','Cancelled'];
+                const data = [
+                    statusData.pending || 0,
+                    statusData.processing || 0,
+                    statusData.completed || 0,
+                    statusData.cancelled || 0,
+                ];
+                const palette = ['#facc15','#3b82f6','#22c55e','#ef4444'];
+                new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: palette,
+                            borderColor: '#020617',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            legend: {
+                                labels: { color: 'rgba(248,249,255,0.9)', boxWidth: 10 }
+                            }
+                        },
+                        cutout: '60%',
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
